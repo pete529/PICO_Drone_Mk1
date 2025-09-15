@@ -1,0 +1,12 @@
+Designator	Qty	Manufacturer	MPN	Description
+U1	1	Raspberry Pi	SC0912 (Pico 2 W)	RP2350 MCU module
+U2,U3	2	Texas Instruments	DRV8833PWPR	Dual H-bridge motor driver (HTSSOP-16)
+U4	1	--	GY-91	MPU-9250 + BMP280 IMU module
+J1	1	Pimoroni	PIM485 (Amigo Pro)	LiPo charger/boost 5V
+D1	1	Any	0603 Green LED	Indicator
+D2	1	Any	0603 Red LED	Indicator
+R1,R2	2	Any	0603 1k	LED resistors
+SW1	1	Any	SPST Slide SMD	Main power switch
+J2,J3,J4,J5	4	Any	2-pin motor header	Motor connectors
+JP1	1	Any	3-way solder jumper	Select VMOTOR rail
+TP_VM,TP_GND	2	Any	Test loop	Test points
