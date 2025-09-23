@@ -5,15 +5,18 @@
 param(
     [Parameter(Mandatory=$false, HelpMessage="GitHub Personal Access Token (optional if already authenticated)")]
     [string]$GitHubToken,
-    
     [Parameter(Mandatory=$false)]
     [string]$Owner = "pete529",
-    
     [Parameter(Mandatory=$false)]
     [string]$Repo = "PICO_Drone_Mk1",
-
     [Parameter(Mandatory=$false, HelpMessage="Write JSON summary file path (optional)")]
-    [string]$SummaryPath = ""
+    [string]$SummaryPath = "",
+    [Parameter(Mandatory=$false, HelpMessage="Write Markdown report file path (optional)")]
+    [string]$MarkdownReportPath = "",
+    [Parameter(Mandatory=$false, HelpMessage="Maximum number of new issues to create this run (0 = no limit)")]
+    [int]$MaxCreate = 0,
+    [Parameter(Mandatory=$false, HelpMessage="Write incremental summary after each creation/skip (default: true if SummaryPath provided)")]
+    [bool]$Incremental = $true
 )
 
 # Ensure GitHub CLI is available
@@ -24,17 +27,22 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
 
 # Authentication (optional if already logged in)
 Write-Host "Checking GitHub authentication..." -ForegroundColor Green
+# Auto-read GH_TOKEN / GITHUB_TOKEN if present and -GitHubToken not supplied
+if (-not $GitHubToken) {
+    if ($env:GH_TOKEN) { $GitHubToken = $env:GH_TOKEN }
+    elseif ($env:GITHUB_TOKEN) { $GitHubToken = $env:GITHUB_TOKEN }
+}
 $authStatus = gh auth status 2>$null
 if ($LASTEXITCODE -ne 0) {
     if ($GitHubToken) {
-        Write-Host "Authenticating with provided token..." -ForegroundColor Green
+        Write-Host "Authenticating with provided token (env or param)..." -ForegroundColor Green
         if ($GitHubToken.Length -lt 20) { Write-Warning "Token length seems short; ensure you passed a valid PAT" }
         $GitHubToken | gh auth login --with-token | Out-Null
     } else {
         Write-Error "Not authenticated and no token provided. Provide -GitHubToken or login manually with 'gh auth login' first."; exit 1
     }
 } else {
-    if ($GitHubToken) { Write-Host "Already authenticated; ignoring provided token." -ForegroundColor Yellow }
+    if ($GitHubToken) { Write-Host "Already authenticated; ignoring provided token value (session active)." -ForegroundColor Yellow }
     else { Write-Host "Already authenticated via existing gh session." -ForegroundColor Green }
 }
 
@@ -54,20 +62,7 @@ if ($LASTEXITCODE -eq 0 -and $closedRaw) { $existingIssueTitles += ( ($closedRaw
 $existingIssueTitles = $existingIssueTitles | Sort-Object -Unique
 Write-Host "Found $($existingIssueTitles.Count) existing issue titles (open+closed)." -ForegroundColor Cyan
 
-# Synchronize labels (create any missing)
-Write-Host "Synchronizing labels..." -ForegroundColor Green
-$allNeededLabels = ($issues | ForEach-Object { $_.labels }) | Sort-Object -Unique
-$existingLabelsJson = gh label list --repo "$Owner/$Repo" --json name 2>$null
-if ($LASTEXITCODE -eq 0 -and $existingLabelsJson) {
-    $existingLabelNames = ($existingLabelsJson | ConvertFrom-Json).name
-} else { $existingLabelNames = @() }
-$defaultColor = "0e8a16"  # greenish
-foreach ($lbl in $allNeededLabels) {
-    if (-not ($existingLabelNames -contains $lbl)) {
-        gh label create $lbl --color $defaultColor --repo "$Owner/$Repo" 2>$null
-        if ($LASTEXITCODE -eq 0) { Write-Host "+ Created label: $lbl" -ForegroundColor Green } else { Write-Warning "Could not create label '$lbl' (may already exist or insufficient perms)" }
-    }
-}
+## Label synchronization moved below after $issues is defined
 
 # Define the issues structure
 $issues = @(
@@ -551,54 +546,127 @@ This epic covers all documentation including build instructions, user guides, an
     }
 )
 
+# Now that $issues is defined, synchronize labels (create any missing) with reduced noise
+Write-Host "Synchronizing labels..." -ForegroundColor Green
+$allNeededLabels = ($issues | ForEach-Object { $_.labels }) | Sort-Object -Unique
+$existingLabelsJson = gh label list --repo "$Owner/$Repo" --json name 2>$null
+if ($LASTEXITCODE -eq 0 -and $existingLabelsJson) {
+    $existingLabelNames = ($existingLabelsJson | ConvertFrom-Json).name
+} else { $existingLabelNames = @() }
+$defaultColor = "0e8a16"  # greenish
+$createdLabelBatch = @()
+foreach ($lbl in $allNeededLabels) {
+    if (-not ($existingLabelNames -contains $lbl)) {
+        gh label create $lbl --color $defaultColor --repo "$Owner/$Repo" 2>$null
+        if ($LASTEXITCODE -eq 0) { $createdLabelBatch += $lbl } else { Write-Verbose "Label create failed (likely exists): $lbl" }
+    }
+}
+if ($createdLabelBatch.Count -gt 0) { Write-Host ("Created {0} new labels" -f $createdLabelBatch.Count) -ForegroundColor Green } else { Write-Host "No new labels needed." -ForegroundColor DarkGray }
+
 # Create issues
 Write-Host "Creating GitHub issues (idempotent)..." -ForegroundColor Green
 $createdCount = 0
 $skippedCount = 0
+$createdTitles = @()
+$skippedTitles = @()
 $startTime = Get-Date
 
+# Fast resume optimization: build index of remaining titles not yet created
+$existingSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($t in $existingIssueTitles) { $null = $existingSet.Add($t) }
+
+function Write-IncrementalSummary {
+    param(
+        [int]$CreatedSoFar,
+        [int]$SkippedSoFar,
+        [datetime]$StartTime,
+        [string[]]$CreatedList,
+        [string[]]$SkippedList,
+        [bool]$Complete = $false
+    )
+    if (-not $SummaryPath) { return }
+    $el = (Get-Date) - $StartTime
+    $obj = [pscustomobject]@{
+        repository    = "$Owner/$Repo";
+        createdCount  = $CreatedSoFar;
+        skippedCount  = $SkippedSoFar;
+        totalDefined  = $issues.Count;
+        elapsedSeconds= [math]::Round($el.TotalSeconds,1);
+        createdTitles = $CreatedList;
+        skippedTitles = $SkippedList;
+        complete      = $Complete;
+        timestamp     = (Get-Date).ToString('o')
+    }
+    try { $obj | ConvertTo-Json -Depth 6 | Out-File -FilePath $SummaryPath -Encoding UTF8 } catch { }
+}
+
 foreach ($issue in $issues) {
+    if ($existingSet.Contains($issue.title)) {
+        # Skip without gh call for speed
+        Write-Host "Skipping (exists/cache): $($issue.title)" -ForegroundColor DarkYellow
+        $skippedCount++
+        $skippedTitles += $issue.title
+        if ($Incremental -and $SummaryPath) { Write-IncrementalSummary -CreatedSoFar $createdCount -SkippedSoFar $skippedCount -StartTime $startTime -CreatedList $createdTitles -SkippedList $skippedTitles }
+        if ($MaxCreate -gt 0 -and $createdCount -ge $MaxCreate) { break }
+        continue
+    }
     try {
         $labelArgs = $issue.labels | ForEach-Object { "--label", $_ }
-        
         if ($existingIssueTitles -contains $issue.title) {
-            Write-Host "↷ Skipping (exists): $($issue.title)" -ForegroundColor Yellow
+            Write-Host "Skipping (exists): $($issue.title)" -ForegroundColor Yellow
             $skippedCount++
+            $skippedTitles += $issue.title
+            if ($Incremental -and $SummaryPath) { Write-IncrementalSummary -CreatedSoFar $createdCount -SkippedSoFar $skippedCount -StartTime $startTime -CreatedList $createdTitles -SkippedList $skippedTitles }
+            Start-Sleep -Milliseconds 15
         } else {
             Write-Host "Creating: $($issue.title)" -ForegroundColor Cyan
-            $result = gh issue create --title $issue.title --body $issue.body @labelArgs --repo "$Owner/$Repo" 2>$null
+            $null = gh issue create --title $issue.title --body $issue.body @labelArgs --repo "$Owner/$Repo" 2>$null
             if ($LASTEXITCODE -eq 0) {
                 $createdCount++
-                Write-Host "✓ Created: $($issue.title)" -ForegroundColor Green
+                $createdTitles += $issue.title
+                Write-Host "Created: $($issue.title)" -ForegroundColor Green
             } else {
                 Write-Warning "Failed to create: $($issue.title)"
             }
+            if ($Incremental -and $SummaryPath) { Write-IncrementalSummary -CreatedSoFar $createdCount -SkippedSoFar $skippedCount -StartTime $startTime -CreatedList $createdTitles -SkippedList $skippedTitles }
+            Start-Sleep -Milliseconds 150
         }
-        
-        # Small delay to avoid rate limiting
-        Start-Sleep -Milliseconds 500
-        
+        if ($MaxCreate -gt 0 -and $createdCount -ge $MaxCreate) { Write-Host "Reached MaxCreate ($MaxCreate). Stopping early." -ForegroundColor Yellow; break }
     } catch {
         Write-Warning "Error creating issue '$($issue.title)': $($_.Exception.Message)"
     }
 }
 
 $elapsed = (Get-Date) - $startTime
-Write-Host "`n🚀 Issue creation complete" -ForegroundColor Green
+Write-Host "`nIssue creation complete" -ForegroundColor Green
 Write-Host "Created: $createdCount  Skipped: $skippedCount  Total Defined: $($issues.Count)  Elapsed: {0:n1}s" -f $elapsed.TotalSeconds -ForegroundColor Cyan
 Write-Host "View issues: https://github.com/$Owner/$Repo/issues" -ForegroundColor Cyan
 
-if ($SummaryPath) {
-    $summary = [pscustomobject]@{
-        repository = "$Owner/$Repo";
-        created    = $createdCount;
-        skipped    = $skippedCount;
-        totalDefined = $issues.Count;
-        elapsedSeconds = [math]::Round($elapsed.TotalSeconds,1);
-        timestamp = (Get-Date).ToString('o')
-    }
+if ($SummaryPath) { Write-IncrementalSummary -CreatedSoFar $createdCount -SkippedSoFar $skippedCount -StartTime $startTime -CreatedList $createdTitles -SkippedList $skippedTitles -Complete $true }
+
+if ($MarkdownReportPath) {
     try {
-        $summary | ConvertTo-Json -Depth 4 | Out-File -FilePath $SummaryPath -Encoding UTF8
-        Write-Host "Summary JSON written to $SummaryPath" -ForegroundColor Green
-    } catch { Write-Warning "Failed to write summary file: $($_.Exception.Message)" }
+        $lines = @()
+        $lines += "# Issue Creation Report"
+        $lines += "Repository: $Owner/$Repo"
+        $lines += ("Run Timestamp: {0}" -f (Get-Date).ToString('u'))
+        $lines += ""
+        $lines += ("Created: {0}  Skipped: {1}  Total Defined: {2}" -f $createdCount, $skippedCount, $issues.Count)
+        $lines += ""
+        if ($createdTitles.Count -gt 0) {
+            $lines += "## Created Issues"
+            $createdTitles | ForEach-Object { $lines += "- $_" }
+            $lines += ""
+        }
+        if ($skippedTitles.Count -gt 0) {
+            $lines += "## Skipped (Already Existed)"
+            $skippedTitles | Select-Object -First 50 | ForEach-Object { $lines += "- $_" }
+            if ($skippedTitles.Count -gt 50) { $lines += "- ... (truncated)" }
+            $lines += ""
+        }
+        Set-Content -Path $MarkdownReportPath -Value $lines -Encoding UTF8
+        Write-Host "Markdown report written to $MarkdownReportPath" -ForegroundColor Green
+    } catch {
+        Write-Warning "Failed to write markdown report: $($_.Exception.Message)"
+    }
 }
