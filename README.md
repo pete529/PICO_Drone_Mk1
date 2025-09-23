@@ -120,6 +120,88 @@ This will create 25+ GitHub issues organized with labels:
 
 **See:** `GITHUB_ISSUES_README.md` for complete documentation
 
+### Issue Automation (Advanced Usage)
+
+The script `create_github_issues.ps1` is **idempotent**: it will not recreate issues that already exist (it checks both open and closed issues by exact title match).
+
+Key features:
+- Automatic authentication reuse (you only need `-GitHubToken` if not already logged in with `gh auth login`)
+- Full backlog coverage (all epics, features, and stories from `user_stories.md`)
+- Label synchronization (missing labels are created on-the-fly)
+- Duplicate avoidance (skips existing titles, counts skipped vs created)
+- Optional JSON summary output via `-SummaryPath`
+- Safe to re-run any time to add only new backlog items
+
+#### Parameters
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `-GitHubToken` | No | Personal access token (PAT) with `repo` scope. Optional if already authenticated. |
+| `-Owner` | No | Repository owner (default: preset in script) |
+| `-Repo` | No | Repository name (default: preset in script) |
+| `-SummaryPath` | No | Path to write JSON summary of run (created, skipped, totals) |
+
+#### Examples
+```powershell
+# 1. First time (no existing gh auth session)
+./create_github_issues.ps1 -GitHubToken $env:GITHUB_TOKEN
+
+# 2. Already authenticated via gh
+./create_github_issues.ps1
+
+# 3. Capture a summary JSON
+./create_github_issues.ps1 -SummaryPath .\issue_summary.json
+
+# 4. Different fork or repo
+./create_github_issues.ps1 -Owner YourUser -Repo ForkedRepo -SummaryPath out\summary.json
+```
+
+#### Sample Output
+```
+Checking GitHub authentication...
+Verifying repository access (owner/repo)...
+Fetching existing issue titles...
+Synchronizing labels...
+Creating GitHub issues (idempotent)...
+↷ Skipping (exists): Epic 1: Hardware Design & PCB Development
+✓ Created: Story 2.2.1: Individual Motor Speed Control
+...
+🚀 Issue creation complete
+Created: 57  Skipped: 42  Total Defined: 99  Elapsed: 12.4s
+```
+
+#### Summary JSON Schema
+```json
+{
+	"repository": "owner/repo",
+	"created": 57,
+	"skipped": 42,
+	"totalDefined": 99,
+	"elapsedSeconds": 12.4,
+	"timestamp": "2025-09-23T14:52:31.210Z"
+}
+```
+
+#### Adding New Stories Later
+1. Append new stories to `user_stories.md` using the naming pattern (e.g. `Story 2.4.1:`).
+2. Add corresponding hash entry to the `$issues` array in `create_github_issues.ps1`.
+3. Re-run the script – only new titles are created; existing ones are skipped.
+
+#### Troubleshooting
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Auth error | Not logged in & no token | Run `gh auth login` or pass `-GitHubToken` |
+| Label create warnings | Label exists / insufficient perms | Safe to ignore if labels appear in repo |
+| Duplicate creation | Title manually changed on GitHub | Align local script title with existing issue |
+| >500 existing issues | Pagination limit | (Future) add paging; currently first 500 open + 500 closed |
+
+#### Potential Future Enhancements
+- `-DryRun` preview mode
+- Filtering (e.g. `-OnlyEpic 3` or `-Match "Motor"`)
+- Auto-generated backlog index file
+- Changelog-style diff when new stories are added
+
+Open an issue if you need one of these prioritized.
+
 ## Roadmap & Development Status
 
 | Phase | Goal | Status | Issues |
