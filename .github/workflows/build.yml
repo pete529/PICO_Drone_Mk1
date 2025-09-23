@@ -24,8 +24,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install atopile==0.12.4
 
-      - name: Build Quadcopter PCB
-        working-directory: "PCB Design/quadcopter_pcb"
+      - name: Build Hardware Project
+        working-directory: hardware
         run: |
           ato build --no-color
 
@@ -35,10 +35,10 @@ jobs:
         with:
           name: pcb-build-artifacts
           path: |
-            PCB Design/quadcopter_pcb/build/builds/default/*.kicad_pcb
-            PCB Design/quadcopter_pcb/build/builds/default/*.bom.csv
-            PCB Design/quadcopter_pcb/build/builds/default/*.variables.md
-            PCB Design/quadcopter_pcb/build/builds/default/*.i2c_tree.md
+            hardware/build/builds/default/*.kicad_pcb
+            hardware/build/builds/default/*.bom.csv
+            hardware/build/builds/default/*.variables.md
+            hardware/build/builds/default/*.i2c_tree.md
 
       - name: Upload 3D / GLB (if present)
         if: always()
@@ -46,5 +46,5 @@ jobs:
         with:
           name: pcb-3d
           path: |
-            PCB Design/quadcopter_pcb/build/builds/default/*.pcba.glb
+            hardware/build/builds/default/*.pcba.glb
           if-no-files-found: ignore
