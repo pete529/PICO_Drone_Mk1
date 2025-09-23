@@ -97,6 +97,9 @@ scratch/
 !COMPONENT_TASKS.md
 !VERSION
 
-# Issue generation summary (local artifact)
+# Issue generation summaries / reports (local artifacts)
 issues_summary.json
+issues_summary_v2.json
+issues_report.md
+issues_report_v2.md
 
