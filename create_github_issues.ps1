@@ -639,7 +639,7 @@ foreach ($issue in $issues) {
 
 $elapsed = (Get-Date) - $startTime
 Write-Host "`nIssue creation complete" -ForegroundColor Green
-Write-Host "Created: $createdCount  Skipped: $skippedCount  Total Defined: $($issues.Count)  Elapsed: {0:n1}s" -f $elapsed.TotalSeconds -ForegroundColor Cyan
+Write-Host ("Created: $createdCount  Skipped: $skippedCount  Total Defined: $($issues.Count)  Elapsed: {0:n1}s" -f $elapsed.TotalSeconds) -ForegroundColor Cyan
 Write-Host "View issues: https://github.com/$Owner/$Repo/issues" -ForegroundColor Cyan
 
 if ($SummaryPath) { Write-IncrementalSummary -CreatedSoFar $createdCount -SkippedSoFar $skippedCount -StartTime $startTime -CreatedList $createdTitles -SkippedList $skippedTitles -Complete $true }

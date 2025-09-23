@@ -202,6 +202,35 @@ Created: 57  Skipped: 42  Total Defined: 99  Elapsed: 12.4s
 
 Open an issue if you need one of these prioritized.
 
+## GitHub Issues Creation (v2 Markdown Parser)
+
+A newer v2 script parses a simple Markdown file and syncs GitHub issues idempotently.
+
+- File format: `# Epic`, `## Feature`, `### Story`
+- Optional labels inline: `[labels: a, b]` in the heading, or a `Labels:` line in the body
+- Auto adds a type label: `Epic` | `Feature` | `Story`
+
+Usage:
+
+```powershell
+# Basic: create missing issues only
+./create_github_issues_v2.ps1 -StoriesPath user_stories.md
+
+# Update existing issues (body + labels add). Use -ReplaceLabels to reconcile exactly
+./create_github_issues_v2.ps1 -StoriesPath user_stories.md -UpdateExisting
+./create_github_issues_v2.ps1 -StoriesPath user_stories.md -UpdateExisting -ReplaceLabels
+
+# Dry run (no changes), plus write summary and markdown report
+./create_github_issues_v2.ps1 -StoriesPath user_stories.md -DryRun -SummaryPath issues_summary_v2.json -MarkdownReportPath issues_report_v2.md
+```
+
+Tips:
+- Auth via `gh auth login`, or set `GH_TOKEN` / `GITHUB_TOKEN` env var
+- Repo resolution: uses the current repo if `-Owner/-Repo` are not provided
+- Labels referenced in Markdown are ensured (created if missing)
+
+See `user_stories.template.md` for a sample structure.
+
 ## Roadmap & Development Status
 
 | Phase | Goal | Status | Issues |
