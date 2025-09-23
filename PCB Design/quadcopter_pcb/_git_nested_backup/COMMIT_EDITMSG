@@ -1,0 +1,39 @@
+chore: add quadcopter pcb working files and project status before gitlab push
+
+# Conflicts:
+#	README.md
+#	main.ato
+#
+# It looks like you may be committing a cherry-pick.
+# If this is not correct, please run
+#	git update-ref -d CHERRY_PICK_HEAD
+# and try again.
+
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Author:    pete529@virginmedia.com <pete529@virginmedia.com>
+# Date:      Tue Sep 23 11:10:25 2025 +0100
+#
+# On branch rebase_work
+# Your branch is up to date with 'origin/main'.
+#
+# You are currently cherry-picking commit 1f8a152.
+#
+# Changes to be committed:
+#	new file:   .cursor/mcp.json
+#	new file:   .cursor/rules/ato.mdc
+#	new file:   .github/instructions/ato.instructions.md
+#	new file:   .mcp.json
+#	new file:   .windsurf/rules/ato.md
+#	new file:   CLAUDE.md
+#	new file:   PROJECT_STATUS.md
+#	new file:   README.md
+#	new file:   layouts/default/default.kicad_pcb
+#	new file:   main.ato
+#	new file:   pico2w.ato
+#
+# Untracked files:
+#	build/
+#

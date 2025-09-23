@@ -1,0 +1,19 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[remote "gitlab"]
+	url = https://gitlab.com/USERNAME/PICO_Drone_Mk1.git
+	fetch = +refs/heads/*:refs/remotes/gitlab/*
+[user]
+	name = pete529
+	email = pete529@virginmedia.com
+[remote "origin"]
+	url = https://github.com/pete529/PICO_Drone_Mk1.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "rebase_work"]
+	remote = origin
+	merge = refs/heads/main

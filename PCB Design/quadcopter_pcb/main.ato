@@ -1,0 +1,180 @@
+"""
+Raspberry Pi Pico 2W Quadcopter Flight Controller PCB
+Comprehensive signal definition for complete quadcopter design.
+This will generate a proper netlist for KiCad implementation.
+"""
+
+module App:
+    """Main quadcopter flight controller board"""
+    
+    # ===========================================
+    # POWER DISTRIBUTION SIGNALS
+    # ===========================================
+    signal VBAT        # LiPo battery voltage (3.7V nominal)
+    signal VSYS        # System voltage from Amigo Pro
+    signal VCC_5V      # 5V rail from Amigo Pro (for motors)
+    signal VCC_3V3     # 3.3V rail from Pico (for logic/sensors)
+    signal GND         # Ground reference
+    
+    # ===========================================
+    # RASPBERRY PI PICO 2W SIGNALS
+    # ===========================================
+    # Motor control GPIOs (8 pins for 2x DRV8833)
+    signal PICO_GP0    # DRV8833_L AIN1 (Left motor 1 direction A)
+    signal PICO_GP1    # DRV8833_L AIN2 (Left motor 1 direction B)
+    signal PICO_GP2    # DRV8833_L BIN1 (Left motor 2 direction A)
+    signal PICO_GP3    # DRV8833_L BIN2 (Left motor 2 direction B)
+    signal PICO_GP4    # DRV8833_R AIN1 (Right motor 1 direction A)
+    signal PICO_GP5    # DRV8833_R AIN2 (Right motor 1 direction B)
+    signal PICO_GP6    # DRV8833_R BIN1 (Right motor 2 direction A)
+    signal PICO_GP7    # DRV8833_R BIN2 (Right motor 2 direction B)
+    
+    # Motor driver enable/sleep signals
+    signal PICO_GP8    # DRV8833_L SLEEP (Left driver enable)
+    signal PICO_GP9    # DRV8833_R SLEEP (Right driver enable)
+    
+    # I2C bus for sensors
+    signal PICO_GP26_SDA  # I2C SDA (to ICM-20946 and BMP280)
+    signal PICO_GP27_SCL  # I2C SCL (to ICM-20946 and BMP280)
+    
+    # Status LEDs and button
+    signal PICO_GP13   # Power button input (with pull-up)
+    signal PICO_GP14   # Red LED control (activity indicator)
+    signal PICO_GP15   # Green LED control (power indicator)
+    
+    # Sensor interrupt/status signals
+    signal PICO_GP16   # IMU interrupt pin
+    signal PICO_GP17   # Spare GPIO
+    signal PICO_GP18   # Spare GPIO
+    
+    # ===========================================
+    # MOTOR DRIVER SIGNALS (2x DRV8833)
+    # ===========================================
+    # Left DRV8833 motor outputs
+    signal MOTOR_L1_AOUT  # Left motor 1 output A
+    signal MOTOR_L1_BOUT  # Left motor 1 output B
+    signal MOTOR_L2_AOUT  # Left motor 2 output A  
+    signal MOTOR_L2_BOUT  # Left motor 2 output B
+    
+    # Right DRV8833 motor outputs
+    signal MOTOR_R1_AOUT  # Right motor 1 output A
+    signal MOTOR_R1_BOUT  # Right motor 1 output B
+    signal MOTOR_R2_AOUT  # Right motor 2 output A
+    signal MOTOR_R2_BOUT  # Right motor 2 output B
+    
+    # Motor power and fault signals
+    signal DRV8833_L_FAULT  # Left driver fault output
+    signal DRV8833_R_FAULT  # Right driver fault output
+    
+    # DRV8833 control signals that need to be connected
+    signal DRV8833_L_AIN1
+    signal DRV8833_L_AIN2
+    signal DRV8833_L_BIN1
+    signal DRV8833_L_BIN2
+    signal DRV8833_L_SLEEP
+    signal DRV8833_R_AIN1
+    signal DRV8833_R_AIN2
+    signal DRV8833_R_BIN1
+    signal DRV8833_R_BIN2
+    signal DRV8833_R_SLEEP
+    
+    # ===========================================
+    # SENSOR SIGNALS
+    # ===========================================
+    # ICM-20946 IMU (I2C interface)
+    signal ICM20946_SDA    # Connected to I2C bus
+    signal ICM20946_SCL    # Connected to I2C bus  
+    signal ICM20946_INT    # Interrupt output
+    signal ICM20946_VCC    # 3.3V power
+    signal ICM20946_GND    # Ground
+    
+    # BMP280 Pressure/Temperature sensor (I2C interface)
+    signal BMP280_SDA      # Connected to I2C bus
+    signal BMP280_SCL      # Connected to I2C bus
+    signal BMP280_VCC      # 3.3V power
+    signal BMP280_GND      # Ground
+    
+    # ===========================================
+    # LED CIRCUITS
+    # ===========================================
+    # Green LED (power indicator) - always on when powered
+    signal LED_GREEN_ANODE
+    signal LED_GREEN_CATHODE
+    signal LED_GREEN_RESISTOR  # 1K current limiting resistor
+    
+    # Red LED (activity indicator) - controlled by GPIO
+    signal LED_RED_ANODE  
+    signal LED_RED_CATHODE
+    signal LED_RED_RESISTOR    # 1K current limiting resistor
+    
+    # ===========================================
+    # POWER BUTTON CIRCUIT
+    # ===========================================
+    signal BUTTON_PWR_SW1      # Switch contact 1
+    signal BUTTON_PWR_SW2      # Switch contact 2
+    signal BUTTON_PWR_PULLUP   # Pull-up resistor (10K)
+    
+    # ===========================================
+    # MOTOR CONNECTORS
+    # ===========================================
+    # 4-pin connectors for external 720 motors
+    signal MOTOR_L1_CONNECTOR_1  # Left motor 1 wire 1
+    signal MOTOR_L1_CONNECTOR_2  # Left motor 1 wire 2
+    signal MOTOR_L2_CONNECTOR_1  # Left motor 2 wire 1  
+    signal MOTOR_L2_CONNECTOR_2  # Left motor 2 wire 2
+    signal MOTOR_R1_CONNECTOR_1  # Right motor 1 wire 1
+    signal MOTOR_R1_CONNECTOR_2  # Right motor 1 wire 2
+    signal MOTOR_R2_CONNECTOR_1  # Right motor 2 wire 1
+    signal MOTOR_R2_CONNECTOR_2  # Right motor 2 wire 2
+    
+    # ===========================================
+    # POWER MANAGEMENT (AMIGO PRO)
+    # ===========================================
+    signal AMIGO_VBAT_IN       # Battery input
+    signal AMIGO_VBAT_OUT      # Battery output to system
+    signal AMIGO_5V_OUT        # 5V regulated output
+    signal AMIGO_GND           # Ground
+    signal AMIGO_CHARGE_STATUS # Charging status LED
+    
+    # ===========================================
+    # SIGNAL CONNECTIONS (NETLIST)
+    # ===========================================
+    # Connect I2C bus
+    ICM20946_SDA ~ PICO_GP26_SDA
+    ICM20946_SCL ~ PICO_GP27_SCL
+    BMP280_SDA ~ PICO_GP26_SDA
+    BMP280_SCL ~ PICO_GP27_SCL
+    
+    # Connect motor control signals
+    PICO_GP0 ~ DRV8833_L_AIN1
+    PICO_GP1 ~ DRV8833_L_AIN2
+    PICO_GP2 ~ DRV8833_L_BIN1
+    PICO_GP3 ~ DRV8833_L_BIN2
+    PICO_GP4 ~ DRV8833_R_AIN1
+    PICO_GP5 ~ DRV8833_R_AIN2
+    PICO_GP6 ~ DRV8833_R_BIN1
+    PICO_GP7 ~ DRV8833_R_BIN2
+    
+    # Connect enable signals
+    PICO_GP8 ~ DRV8833_L_SLEEP
+    PICO_GP9 ~ DRV8833_R_SLEEP
+    
+    # Connect LED controls
+    PICO_GP14 ~ LED_RED_RESISTOR
+    PICO_GP15 ~ LED_GREEN_RESISTOR
+    
+    # Connect button
+    PICO_GP13 ~ BUTTON_PWR_SW2
+    
+    # Connect sensor interrupt
+    PICO_GP16 ~ ICM20946_INT
+    
+    # Motor outputs to connectors
+    MOTOR_L1_AOUT ~ MOTOR_L1_CONNECTOR_1
+    MOTOR_L1_BOUT ~ MOTOR_L1_CONNECTOR_2
+    MOTOR_L2_AOUT ~ MOTOR_L2_CONNECTOR_1
+    MOTOR_L2_BOUT ~ MOTOR_L2_CONNECTOR_2
+    MOTOR_R1_AOUT ~ MOTOR_R1_CONNECTOR_1
+    MOTOR_R1_BOUT ~ MOTOR_R1_CONNECTOR_2
+    MOTOR_R2_AOUT ~ MOTOR_R2_CONNECTOR_1
+    MOTOR_R2_BOUT ~ MOTOR_R2_CONNECTOR_2
