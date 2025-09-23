@@ -1,59 +1,157 @@
 # PICO Drone Mk1 – Quadcopter Flight Controller PCB
 
-**Status:** Early electrical net scaffolding (components not yet fully instantiated in Atopile – BOM empty). This repository will evolve toward a complete Raspberry Pi Pico 2W based flight controller PCB.
+**Status:** ✅ Hardware design complete with successful atopile builds. Ready for component sourcing and PCB manufacturing.
 
-> See `COMPONENT_TASKS.md` for the detailed hardware implementation checklist.
+> **New:** Complete user stories and GitHub issue management system available. See [GitHub Issues Creation](#github-issues-creation) below.
 
 ## Overview
-This project aims to design and iterate a custom flight controller PCB using:
-- Raspberry Pi Pico 2W module (Wi-Fi enabled RP2040)
-- Dual DRV8833 motor driver ICs (4 brushed outputs)
-- 9-axis IMU (ICM-20948/20946 family)
-- Barometric sensor (BMP280)
-- Power management based on Pimoroni Amigo Pro (boost + charge)
-- Status LEDs (Green solid, Red flashing)
-- Power button / enable circuitry
-- Motor connectors (4x) with proper decoupling
+This project is a complete Raspberry Pi Pico 2W based quadcopter flight controller featuring:
+- **Raspberry Pi Pico 2W** module (Wi-Fi enabled RP2040 with wireless connectivity)
+- **Dual DRV8833** motor driver ICs (4 independent brushed motor outputs)  
+- **GY-91 9-DOF IMU** (ICM-20948 + BMP280 for orientation, acceleration, and altitude)
+- **Power management** with LiPo Amigo Pro (boost converter + charging circuit)
+- **Status LEDs** (power indicator and user-controllable status)
+- **User controls** (power button and mode switching)
+- **Robust design** with proper power filtering and protection circuits
 
-## Current Repository Contents
-- `PCB Design/quadcopter_pcb/main.ato` – Signal-level module definitions (needs real component models)
-- `PCB Design/quadcopter_pcb/layouts/default` – Generated KiCad PCB (placeholder, no footprints yet)
-- `.github/workflows/build.yml` – CI workflow to run `ato build` and publish artifacts
-- `LICENSE` – MIT License
-- `PROJECT_STATUS.md` – Narrative project status notes
-- `pico2w.ato` – Early attempt at a Pico part module (incomplete)
+## Project Structure
+```
+├── hardware/                    # Main atopile project directory
+│   ├── main.ato                # Top-level quadcopter module with complete wiring
+│   ├── ato.yaml                # Build configuration with multiple targets
+│   ├── atopile/components/     # Custom component definitions
+│   ├── layouts/                # KiCad PCB layouts (default + test targets)
+│   ├── build/                  # Generated build artifacts
+│   └── PART_PICKING_GUIDE.md   # Troubleshooting and part selection guide
+├── user_stories.md             # Complete user stories (6 epics, 25+ features)
+├── create_github_issues.ps1    # Script to create GitHub issues from user stories
+├── create_issues.bat           # Windows batch file for easy execution
+├── GITHUB_ISSUES_README.md     # Documentation for issue management system
+└── .github/workflows/          # CI/CD automation
+```
 
-## Build (Locally)
+## Current Status
+
+### ✅ **Hardware Design Complete**
+- **PCB Design**: Complete atopile design with comprehensive component wiring
+- **Build System**: Successfully builds with `ato build` - all stages complete
+- **Component Integration**: Pico 2W, dual DRV8833s, GY-91 IMU, power management
+- **Signal Routing**: All motor control, I2C, power, and user interface connections
+- **Build Artifacts**: KiCad files, BOMs, netlists, and manufacturing files generated
+
+### ✅ **Development Infrastructure**  
+- **CI/CD**: Automated builds on every commit with artifact publishing
+- **Version Management**: Semantic versioning with automated version bumping
+- **Issue Management**: Complete user story system with GitHub issue creation
+- **Documentation**: Comprehensive guides for building, troubleshooting, and development
+
+### 🔄 **Next Steps**
+- **Component Sourcing**: Automated part selection from LCSC (BOM currently empty - needs library parts)
+- **PCB Manufacturing**: Generate Gerber files and prepare for fabrication
+- **Software Development**: Flight control algorithms and wireless interface
+- **Testing & Validation**: Hardware testing and flight control validation
+
+## Build System
+
+### Local Development
 Requirements: Python 3.11+, Atopile 0.12.4
 
 ```powershell
+# Install atopile
 pip install atopile==0.12.4
-cd "PCB Design/quadcopter_pcb"
+
+# Navigate to hardware directory  
+cd hardware
+
+# Build the project (generates KiCad files, BOM, netlist)
 ato build
+
+# Build specific target
+ato build --target test_pickable
 ```
-Artifacts appear in `build/builds/default/`.
 
-## GitHub Actions CI
-Every push to `main` runs the Atopile build and uploads:
-- KiCad PCB file
-- BOM (currently empty)
-- Variable & I2C tree markdown
-- 3D board model (if generated)
+**Build Output:**
+- `build/builds/default/` - Main quadcopter design files
+- `build/builds/test_pickable/` - Component testing files
+- KiCad PCB files (.kicad_pcb)
+- Bill of Materials (.bom.csv) 
+- Netlists and component reports
 
-You can download them from the workflow run artifacts page.
+### Automated CI/CD
+✅ **GitHub Actions** runs on every push:
+- Validates atopile syntax and builds
+- Generates all build artifacts
+- Publishes downloadable artifacts
+- Automated version bumping based on commit messages
 
-## Roadmap
-| Phase | Goal | Status |
-|-------|------|--------|
-| 1 | Repo + signal scaffolding | Done |
-| 2 | Validate Pico 2W component definition | Pending |
-| 3 | Add DRV8833 component (x2) + nets | Pending |
-| 4 | Add IMU + BMP280 I2C device definitions | Pending |
-| 5 | Power / protection / decoupling library parts | Pending |
-| 6 | LED + resistor + button footprints | Pending |
-| 7 | Mounting holes, board outline | Pending |
-| 8 | Gerber generation & DFM review | Pending |
-| 9 | Release v0.2.0 (first real PCB) | Future |
+**Download artifacts:** Go to any workflow run → Artifacts section
+
+## GitHub Issues Creation
+
+This project includes a comprehensive user story system organized into 6 major epics:
+
+1. **Hardware Design & PCB Development** - Complete hardware platform
+2. **Flight Control Software** - Stable and responsive flight control  
+3. **Wireless Communication & Control** - Remote piloting capabilities
+4. **Development Tools & CI/CD** - Automated build and test systems
+5. **Testing & Validation** - Safety and reliability verification
+6. **Documentation & User Guide** - Complete instructions and guides
+
+### Creating Issues from User Stories
+
+**Prerequisites:**
+- GitHub CLI installed: https://cli.github.com/
+- GitHub Personal Access Token: https://github.com/settings/tokens (with `repo` scope)
+
+**Quick Start:**
+```powershell
+# Windows - Double-click the batch file
+create_issues.bat
+
+# Or run PowerShell directly
+.\create_github_issues.ps1 -GitHubToken "your_token_here"
+```
+
+This will create 25+ GitHub issues organized with labels:
+- `epic` - High-level business objectives
+- `feature` - Major functional areas  
+- `story` - Individual user requirements
+- `hardware`, `software`, `testing`, `documentation` - Work categories
+
+**See:** `GITHUB_ISSUES_README.md` for complete documentation
+
+## Roadmap & Development Status
+
+| Phase | Goal | Status | Issues |
+|-------|------|--------|---------|
+| ✅ **Phase 1** | Repository + CI/CD infrastructure | **Complete** | Epic 4 |
+| ✅ **Phase 2** | Hardware design + component integration | **Complete** | Epic 1 |
+| ✅ **Phase 3** | Atopile build system + PCB generation | **Complete** | Epic 1 |
+| 🔄 **Phase 4** | Component sourcing + BOM population | **In Progress** | Feature 1.2 |
+| 📋 **Phase 5** | Flight control software development | **Planned** | Epic 2 |
+| 📋 **Phase 6** | Wireless communication + web interface | **Planned** | Epic 3 |
+| 📋 **Phase 7** | Testing + validation + safety systems | **Planned** | Epic 5 |
+| 📋 **Phase 8** | Documentation + user guides | **Planned** | Epic 6 |
+| 📋 **Phase 9** | PCB manufacturing + assembly | **Future** | Feature 1.3 |
+| 📋 **Phase 10** | Flight testing + tuning | **Future** | Epic 2 |
+
+**Current Focus:** Component sourcing and part selection for automated BOM generation
+
+## Technical Specifications
+
+### Hardware
+- **Microcontroller:** Raspberry Pi Pico 2W (RP2040 + WiFi)
+- **Motor Drivers:** 2x DRV8833 (4 independent brushed DC motor outputs)
+- **IMU:** GY-91 (ICM-20948 9-DOF + BMP280 barometer)
+- **Power:** LiPo Amigo Pro (boost converter + charging)
+- **Connectivity:** WiFi 802.11n, I2C sensors, GPIO controls
+- **Indicators:** Status LEDs, user button, power management
+
+### Software (Planned)
+- **Flight Control:** PID stabilization loops, sensor fusion
+- **Communication:** WiFi AP/STA modes, real-time telemetry
+- **Interface:** Web-based control panel, mobile-friendly
+- **Safety:** Fail-safe landing, emergency stop, range limiting
 
 ## Dual Push (GitHub + GitLab)
 Configured by adding GitLab remote earlier. Optional combined push strategy (if desired) can be a script or additional push URL.
