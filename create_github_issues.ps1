@@ -3,14 +3,17 @@
 # This script creates GitHub issues for all epics, features, and stories
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false, HelpMessage="GitHub Personal Access Token (optional if already authenticated)")]
     [string]$GitHubToken,
     
     [Parameter(Mandatory=$false)]
     [string]$Owner = "pete529",
     
     [Parameter(Mandatory=$false)]
-    [string]$Repo = "PICO_Drone_Mk1"
+    [string]$Repo = "PICO_Drone_Mk1",
+
+    [Parameter(Mandatory=$false, HelpMessage="Write JSON summary file path (optional)")]
+    [string]$SummaryPath = ""
 )
 
 # Ensure GitHub CLI is available
@@ -19,9 +22,52 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# Authenticate with GitHub
-Write-Host "Authenticating with GitHub..." -ForegroundColor Green
-echo $GitHubToken | gh auth login --with-token
+# Authentication (optional if already logged in)
+Write-Host "Checking GitHub authentication..." -ForegroundColor Green
+$authStatus = gh auth status 2>$null
+if ($LASTEXITCODE -ne 0) {
+    if ($GitHubToken) {
+        Write-Host "Authenticating with provided token..." -ForegroundColor Green
+        if ($GitHubToken.Length -lt 20) { Write-Warning "Token length seems short; ensure you passed a valid PAT" }
+        $GitHubToken | gh auth login --with-token | Out-Null
+    } else {
+        Write-Error "Not authenticated and no token provided. Provide -GitHubToken or login manually with 'gh auth login' first."; exit 1
+    }
+} else {
+    if ($GitHubToken) { Write-Host "Already authenticated; ignoring provided token." -ForegroundColor Yellow }
+    else { Write-Host "Already authenticated via existing gh session." -ForegroundColor Green }
+}
+
+# Pre-flight: verify repo access
+Write-Host "Verifying repository access ($Owner/$Repo)..." -ForegroundColor Green
+gh repo view "$Owner/$Repo" --json name > $null 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Error "Unable to access repository $Owner/$Repo. Check owner/repo names and permissions."; exit 1 }
+
+# Gather existing issues (title set for idempotency)
+Write-Host "Fetching existing issue titles..." -ForegroundColor Green
+$existingIssuesRaw = gh issue list --limit 500 --state open --repo "$Owner/$Repo" --json title 2>$null
+if ($LASTEXITCODE -ne 0) { Write-Warning "Failed to fetch open issues; proceeding without skip list."; $existingIssueTitles = @() } else { $existingIssueTitles = ($existingIssuesRaw | ConvertFrom-Json).title }
+
+# Also include closed issues to avoid recreation if desired
+$closedRaw = gh issue list --limit 500 --state closed --repo "$Owner/$Repo" --json title 2>$null
+if ($LASTEXITCODE -eq 0 -and $closedRaw) { $existingIssueTitles += ( ($closedRaw | ConvertFrom-Json).title ) }
+$existingIssueTitles = $existingIssueTitles | Sort-Object -Unique
+Write-Host "Found $($existingIssueTitles.Count) existing issue titles (open+closed)." -ForegroundColor Cyan
+
+# Synchronize labels (create any missing)
+Write-Host "Synchronizing labels..." -ForegroundColor Green
+$allNeededLabels = ($issues | ForEach-Object { $_.labels }) | Sort-Object -Unique
+$existingLabelsJson = gh label list --repo "$Owner/$Repo" --json name 2>$null
+if ($LASTEXITCODE -eq 0 -and $existingLabelsJson) {
+    $existingLabelNames = ($existingLabelsJson | ConvertFrom-Json).name
+} else { $existingLabelNames = @() }
+$defaultColor = "0e8a16"  # greenish
+foreach ($lbl in $allNeededLabels) {
+    if (-not ($existingLabelNames -contains $lbl)) {
+        gh label create $lbl --color $defaultColor --repo "$Owner/$Repo" 2>$null
+        if ($LASTEXITCODE -eq 0) { Write-Host "+ Created label: $lbl" -ForegroundColor Green } else { Write-Warning "Could not create label '$lbl' (may already exist or insufficient perms)" }
+    }
+}
 
 # Define the issues structure
 $issues = @(
@@ -383,8 +429,90 @@ This feature covers all sensor integration and data processing for the IMU and o
         labels = @("story", "software", "sensor-fusion", "kalman-filter", "algorithms")
     },
     
-    # Continue with remaining features and stories...
-    # (Due to length constraints, I'll include key ones and indicate the pattern)
+    # Feature 2.2: Motor Control System
+    @{ title = "Feature 2.2: Motor Control System"; body = "**As a flight controller, I want precise motor control so that I can stabilize and maneuver the drone.**\n\nThis feature covers PWM generation, motor speed/direction control, and safety mechanisms."; labels = @("feature", "software", "motor-control", "pwm") }
+    @{ title = "Story 2.2.1: Individual Motor Speed Control"; body = "**As a flight controller, I want individual motor speed control so that I can adjust thrust for each rotor**\n\n## Acceptance Criteria:\n- [ ] Each motor receives independent speed commands\n- [ ] PWM resolution sufficient for stable control (>= 8 bits)\n- [ ] Update rate supports control loop timing\n- [ ] Command interface abstracts motor indices\n- [ ] Verified response with test harness\n\n## Technical Requirements:\n- Implement PWM outputs mapped to motor enable pins\n- Calibrate duty cycle to thrust response\n- Protect against out-of-range commands\n- Provide function for batch motor updates"; labels = @("story", "software", "motor", "pwm", "control") }
+    @{ title = "Story 2.2.2: Motor Direction Control"; body = "**As a flight controller, I want motor direction control so that I can spin motors clockwise and counter-clockwise**\n\n## Acceptance Criteria:\n- [ ] Each motor direction can be set independently\n- [ ] Direction changes handled safely (no shoot-through)\n- [ ] Logical mapping documented (CW/CCW)\n- [ ] Test sequence validates direction outputs\n- [ ] Safe default direction on startup\n\n## Technical Requirements:\n- Use DRV8833 dual H-bridge IN1/IN2 mapping\n- Avoid simultaneous high outputs causing contention\n- Add small delay or braking logic if needed\n- Provide abstraction for setMotorDirection(index, dir)"; labels = @("story", "software", "motor", "direction", "control") }
+    @{ title = "Story 2.2.3: Emergency Motor Shutoff"; body = "**As a flight controller, I want emergency motor shutoff so that I can stop all motors in case of problems**\n\n## Acceptance Criteria:\n- [ ] Single function stops all motors immediately\n- [ ] Triggerable via software flag or external input\n- [ ] Prevents restart until explicitly cleared\n- [ ] Logged event for post-mortem\n- [ ] Tested under simulated fault conditions\n\n## Technical Requirements:\n- Force PWM to zero and disable enable pins\n- Debounce hardware emergency input if present\n- Ensure idempotent repeated calls\n- Provide emergency reason codes"; labels = @("story", "software", "safety", "emergency-stop", "motor") }
+    @{ title = "Story 2.2.4: Motor Speed Limiting"; body = "**As a flight controller, I want motor speed limiting so that I don't damage motors or draw excessive current**\n\n## Acceptance Criteria:\n- [ ] Configurable max duty cycle limit\n- [ ] Software clamps commands above limit\n- [ ] Telemetry exposes limit value\n- [ ] Over-limit attempts logged\n- [ ] Unit tests verify clamping behavior\n\n## Technical Requirements:\n- Provide setGlobalMotorLimit(percent)\n- Store limit in persistent config\n- Apply limit before writing PWM registers\n- Optionally implement ramp rate limiting"; labels = @("story", "software", "safety", "motor", "limits") }
+    
+    # Feature 2.3: Flight Stabilization
+    @{ title = "Feature 2.3: Flight Stabilization"; body = "**As a drone operator, I want automatic stabilization so that the drone maintains level flight.**\n\nThis feature covers PID control loops and stabilization logic."; labels = @("feature", "software", "stabilization", "control-loops") }
+    @{ title = "Story 2.3.1: PID Control Loops"; body = "**As a flight controller, I want PID control loops so that I can automatically correct for tilt and rotation**\n\n## Acceptance Criteria:\n- [ ] Separate PID loops for roll, pitch, yaw\n- [ ] Tunable gains via config interface\n- [ ] Integral windup protection implemented\n- [ ] Loop runs at fixed control frequency\n- [ ] Unit tests for step response\n\n## Technical Requirements:\n- Implement PID with derivative filtering\n- Use fixed-point or float consistent with performance\n- Provide API to update gains at runtime\n- Log loop timing jitter"; labels = @("story", "software", "pid", "control", "stabilization") }
+    @{ title = "Story 2.3.2: Attitude Hold Mode"; body = "**As a flight controller, I want attitude hold mode so that the drone maintains level flight without input**\n\n## Acceptance Criteria:\n- [ ] Mode engages via command\n- [ ] Drift < specified threshold over test interval\n- [ ] Manual input overrides properly\n- [ ] Mode exit restores manual control cleanly\n- [ ] Telemetry indicates active mode\n\n## Technical Requirements:\n- Combine PID outputs with input mixing\n- Use attitude estimate from sensor fusion\n- Freeze reference attitude on engage\n- Provide failsafe if estimate invalid"; labels = @("story", "software", "stabilization", "attitude", "mode") }
+    @{ title = "Story 2.3.3: Rate Limiting"; body = "**As a flight controller, I want rate limiting so that the drone doesn't make sudden dangerous movements**\n\n## Acceptance Criteria:\n- [ ] Configurable angular rate limits\n- [ ] Commands exceeding limit are clamped\n- [ ] Telemetry shows when limiting occurs\n- [ ] Tests verify saturation behavior\n- [ ] Safe defaults applied on startup\n\n## Technical Requirements:\n- Apply limit pre-PID (command) and/or post-PID (output)\n- Provide configuration persistence\n- Avoid integrator windup due to clamping\n- Log events when sustained limiting happens"; labels = @("story", "software", "safety", "rates", "stabilization") }
+    @{ title = "Story 2.3.4: Fail-safe Behavior"; body = "**As a flight controller, I want fail-safe behavior so that the drone lands safely if control is lost**\n\n## Acceptance Criteria:\n- [ ] Detect loss of control signal within timeout\n- [ ] Initiate controlled descent sequence\n- [ ] Disarm motors after landing or timeout\n- [ ] Telemetry records fail-safe event\n- [ ] Tested with simulated signal loss\n\n## Technical Requirements:\n- Monitor command input freshness\n- Provide state machine for fail-safe states\n- Ensure safe throttle ramp down\n- Prevent arming until cause resolved"; labels = @("story", "software", "failsafe", "safety", "stabilization") }
+    
+    # Feature 3.1: WiFi Communication
+    @{ title = "Feature 3.1: WiFi Communication"; body = "**As an operator, I want WiFi connectivity so that I can control the drone from my phone or computer.**\n\nThis feature covers both AP mode and client mode connectivity plus telemetry transport."; labels = @("feature", "software", "wifi", "communication") }
+    @{ title = "Story 3.1.1: WiFi Access Point Mode"; body = "**As an operator, I want the drone to create a WiFi access point so that I can connect directly to it**\n\n## Acceptance Criteria:\n- [ ] AP mode SSID configurable\n- [ ] WPA2 security optional\n- [ ] Connection status telemetry\n- [ ] Stable connection under range test\n- [ ] Documented credentials handling\n\n## Technical Requirements:\n- Use Pico W WiFi APIs\n- Provide config storage for SSID/pass\n- Expose command to toggle AP mode\n- Handle simultaneous client attempts"; labels = @("story", "software", "wifi", "ap-mode") }
+    @{ title = "Story 3.1.2: WiFi Client Mode"; body = "**As an operator, I want the drone to connect to my existing WiFi so that I can control it over my network**\n\n## Acceptance Criteria:\n- [ ] Auto-reconnect on drop\n- [ ] Configurable credentials persisted\n- [ ] Status shown via telemetry\n- [ ] Timeout if network unavailable\n- [ ] IPv4 address reported\n\n## Technical Requirements:\n- Network config CLI / web settings\n- Backoff retry strategy\n- Distinct state machine from AP mode\n- Event callbacks for connect/disconnect"; labels = @("story", "software", "wifi", "client-mode") }
+    @{ title = "Story 3.1.3: Real-time Telemetry"; body = "**As an operator, I want real-time telemetry data so that I can monitor flight status and sensor readings**\n\n## Acceptance Criteria:\n- [ ] Telemetry stream at defined rate\n- [ ] Includes attitude, altitude, battery, motors\n- [ ] Packet loss metrics available\n- [ ] Bandwidth within constraints\n- [ ] Consumer API documented\n\n## Technical Requirements:\n- Use lightweight binary or JSON frames\n- Sequence numbers + timestamp\n- Optional compression if payload large\n- Graceful degradation on congestion"; labels = @("story", "software", "telemetry", "wifi") }
+    @{ title = "Story 3.1.4: Command Acknowledgment"; body = "**As an operator, I want command acknowledgment so that I know my control inputs were received**\n\n## Acceptance Criteria:\n- [ ] ACK includes command id & status\n- [ ] Timeout triggers resend option\n- [ ] Telemetry logs missed ACK stats\n- [ ] Duplicate commands suppressed\n- [ ] Tested under packet loss simulation\n\n## Technical Requirements:\n- Lightweight ACK protocol layer\n- Unique incremental command IDs\n- Retransmit strategy with cap\n- Handle out-of-order packets"; labels = @("story", "software", "protocol", "ack", "reliability") }
+    
+    # Feature 3.2: Control Interface
+    @{ title = "Feature 3.2: Control Interface"; body = "**As an operator, I want intuitive controls so that I can pilot the drone effectively.**\n\nThis feature includes mapping operator inputs to flight control outputs."; labels = @("feature", "software", "controls", "interface") }
+    @{ title = "Story 3.2.1: Throttle Control"; body = "**As an operator, I want throttle control so that I can make the drone climb and descend**\n\n## Acceptance Criteria:\n- [ ] Smooth throttle response curve\n- [ ] Configurable deadband\n- [ ] Min/Max bounds enforced\n- [ ] Telemetry exposes commanded throttle\n- [ ] Tested for linearity\n\n## Technical Requirements:\n- Map input range to motor mix baseline\n- Apply smoothing filter for jitter\n- Provide calibration routine\n- Safe default at initialization"; labels = @("story", "software", "controls", "throttle") }
+    @{ title = "Story 3.2.2: Pitch/Roll Control"; body = "**As an operator, I want pitch/roll control so that I can make the drone move forward/backward and left/right**\n\n## Acceptance Criteria:\n- [ ] Input scaling configurable\n- [ ] Center deadband implemented\n- [ ] Mix integrates with stabilization\n- [ ] Saturation handled gracefully\n- [ ] Telemetry shows pitch/roll commands\n\n## Technical Requirements:\n- Convert inputs to angular rate/angle targets\n- Combine with PID outputs\n- Provide expo/curve options\n- Validate sign conventions"; labels = @("story", "software", "controls", "pitch", "roll") }
+    @{ title = "Story 3.2.3: Yaw Control"; body = "**As an operator, I want yaw control so that I can rotate the drone left and right**\n\n## Acceptance Criteria:\n- [ ] Smooth yaw response\n- [ ] Configurable sensitivity\n- [ ] Interaction with stabilization validated\n- [ ] Telemetry of yaw rate command\n- [ ] Tested for overshoot control\n\n## Technical Requirements:\n- Map input to yaw rate setpoint\n- Integrate with yaw PID\n- Apply rate limiting\n- Provide adjustable expo curve"; labels = @("story", "software", "controls", "yaw") }
+    @{ title = "Story 3.2.4: Emergency Stop Functionality"; body = "**As an operator, I want emergency stop functionality so that I can immediately shut down the drone**\n\n## Acceptance Criteria:\n- [ ] Single input triggers motor kill\n- [ ] Confirmation or debounce logic\n- [ ] Telemetry flags emergency state\n- [ ] Requires explicit reset to arm\n- [ ] Tested under varying load\n\n## Technical Requirements:\n- Integrate with emergency motor shutoff\n- Dedicated command or GPIO\n- Ensure no race with normal control\n- Event logged with timestamp"; labels = @("story", "software", "safety", "emergency-stop") }
+    @{ title = "Story 3.2.5: Flight Mode Selection"; body = "**As an operator, I want flight mode selection so that I can switch between manual, stabilized, and autonomous modes**\n\n## Acceptance Criteria:\n- [ ] Enumerated modes documented\n- [ ] Switching logic safe during flight\n- [ ] Telemetry indicates current mode\n- [ ] Invalid transitions rejected\n- [ ] Unit tests for mode FSM\n\n## Technical Requirements:\n- Implement mode state machine\n- Provide command/API to change mode\n- Validate dependencies before transition\n- Persist last mode if desired"; labels = @("story", "software", "modes", "controls") }
+    
+    # Feature 3.3: Web Interface
+    @{ title = "Feature 3.3: Web Interface"; body = "**As an operator, I want a web-based control interface so that I can pilot the drone from any device.**\n\nThis feature includes UI, telemetry visualization, and control inputs via browser."; labels = @("feature", "software", "web", "ui") }
+    @{ title = "Story 3.3.1: Responsive Web Interface"; body = "**As an operator, I want a responsive web interface so that I can control the drone from mobile devices**\n\n## Acceptance Criteria:\n- [ ] Layout adapts to phone/tablet/desktop\n- [ ] Control inputs low-latency\n- [ ] Minimal bundle size\n- [ ] Works offline after first load (optional)\n- [ ] Cross-browser tested\n\n## Technical Requirements:\n- Implement lightweight frontend\n- Use WebSocket or similar for live data\n- Optimize for low CPU usage on Pico\n- Provide build pipeline"; labels = @("story", "software", "web", "responsive") }
+    @{ title = "Story 3.3.2: Real-time Flight Data Display"; body = "**As an operator, I want real-time flight data display so that I can monitor altitude, orientation, and battery level**\n\n## Acceptance Criteria:\n- [ ] Update rate meets telemetry spec\n- [ ] Displays key metrics clearly\n- [ ] Handles data gaps gracefully\n- [ ] Color/alerts for warning conditions\n- [ ] Performance profiling completed\n\n## Technical Requirements:\n- Data normalization layer\n- Efficient DOM update strategy\n- Historical buffer optional\n- Alert threshold config"; labels = @("story", "software", "telemetry", "ui") }
+    @{ title = "Story 3.3.3: Virtual Joystick Controls"; body = "**As an operator, I want virtual joystick controls so that I can pilot the drone with touch controls**\n\n## Acceptance Criteria:\n- [ ] Touch inputs mapped to control axes\n- [ ] Multi-touch support\n- [ ] Visual feedback of stick position\n- [ ] Deadzone configurable\n- [ ] Latency within acceptable range\n\n## Technical Requirements:\n- Implement canvas or SVG control layer\n- Normalize device pixel ratio\n- Provide calibration & sensitivity settings\n- Integrate with command protocol"; labels = @("story", "software", "controls", "web", "joystick") }
+    @{ title = "Story 3.3.4: Configuration Settings"; body = "**As an operator, I want configuration settings so that I can adjust PID parameters and flight modes**\n\n## Acceptance Criteria:\n- [ ] UI to view & edit config values\n- [ ] Validation of parameter ranges\n- [ ] Persistent storage applied\n- [ ] Change audit or log entry\n- [ ] Revert-to-defaults option\n\n## Technical Requirements:\n- Define config schema\n- Provide REST/WebSocket endpoints\n- Implement transactional updates\n- Protect critical parameters during flight"; labels = @("story", "software", "configuration", "web", "ui") }
+    
+    # Feature 4.1: Automated Building
+    @{ title = "Feature 4.1: Automated Building"; body = "**As a developer, I want automated PCB building so that I can validate designs continuously.**\n\nThis feature covers CI workflows for hardware builds and BOM output."; labels = @("feature", "devops", "ci", "build") }
+    @{ title = "Story 4.1.1: Automated Atopile Builds"; body = "**As a developer, I want automated atopile builds so that PCB changes are validated on every commit**\n\n## Acceptance Criteria:\n- [ ] CI workflow triggers on push/PR\n- [ ] Build logs attached to run\n- [ ] Failure blocks merge\n- [ ] Supports multiple build targets\n- [ ] Documentation of workflow steps\n\n## Technical Requirements:\n- GitHub Actions YAML build job\n- Cache dependencies where possible\n- Artifact uploads of outputs\n- Status badge in README"; labels = @("story", "devops", "ci", "build") }
+    @{ title = "Story 4.1.2: BOM Validation"; body = "**As a developer, I want BOM validation so that I know if components can be sourced**\n\n## Acceptance Criteria:\n- [ ] CI flags missing part numbers\n- [ ] Out-of-stock parts reported\n- [ ] Summary comment on PR\n- [ ] Historical BOM snapshot stored\n- [ ] Threshold for acceptable stock configured\n\n## Technical Requirements:\n- Script queries part API (future)\n- Parse atopile BOM output\n- Generate markdown summary\n- Exit non-zero on critical issues"; labels = @("story", "devops", "bom", "validation") }
+    @{ title = "Story 4.1.3: Build Artifacts"; body = "**As a developer, I want build artifacts so that I can download generated files**\n\n## Acceptance Criteria:\n- [ ] Gerbers packaged\n- [ ] BOM exported\n- [ ] Layout files archived\n- [ ] Retention policy defined\n- [ ] Accessible via CI interface\n\n## Technical Requirements:\n- Use actions/upload-artifact\n- Consistent artifact naming\n- Compress outputs to save space\n- Document retrieval steps"; labels = @("story", "devops", "artifacts", "build") }
+    @{ title = "Story 4.1.4: Build Notifications"; body = "**As a developer, I want build notifications so that I know when builds pass or fail**\n\n## Acceptance Criteria:\n- [ ] Notifications on success/failure\n- [ ] Channel (email/Slack/etc.) configurable\n- [ ] Includes summary of changes\n- [ ] Links to artifacts provided\n- [ ] Quiet hours or rate limiting supported\n\n## Technical Requirements:\n- Integrate with chosen notification action\n- Provide templated message\n- Include commit metadata\n- Handle secret management securely"; labels = @("story", "devops", "notifications", "ci") }
+    @{ title = "Feature 4.2: Version Management"; body = "**As a developer, I want automated versioning so that releases are tracked properly.**\n\nThis feature covers semantic versioning and release tagging."; labels = @("feature", "devops", "versioning") }
+    @{ title = "Story 4.2.1: Semantic Versioning"; body = "**As a developer, I want semantic versioning so that release significance is clear**\n\n## Acceptance Criteria:\n- [ ] Version file updated appropriately\n- [ ] Major/minor/patch rules documented\n- [ ] CI validates version increment on release\n- [ ] Tags match VERSION file\n- [ ] Changelog references version\n\n## Technical Requirements:\n- Provide version bump script\n- Enforce conventional commit parsing (future)\n- Generate changelog template\n- Validate tag before publish"; labels = @("story", "devops", "versioning", "semver") }
+    @{ title = "Story 4.2.2: Automated Tagging"; body = "**As a developer, I want automated tagging so that versions are created consistently**\n\n## Acceptance Criteria:\n- [ ] Tag created on release branch merge\n- [ ] Tag conforms to vMAJOR.MINOR.PATCH\n- [ ] Annotated tag includes summary\n- [ ] Failure surfaces clearly in CI\n- [ ] Duplicate tag prevention\n\n## Technical Requirements:\n- GitHub Action for tagging\n- Use git describe for validation\n- Fail if tag already exists\n- Sign tags optionally"; labels = @("story", "devops", "tagging", "versioning") }
+    @{ title = "Story 4.2.3: Release Notes"; body = "**As a developer, I want release notes so that changes are documented**\n\n## Acceptance Criteria:\n- [ ] Notes generated or curated per release\n- [ ] Includes highlights & breaking changes\n- [ ] Linked to issues/PRs\n- [ ] Stored in CHANGELOG.md\n- [ ] Accessible from GitHub Releases page\n\n## Technical Requirements:\n- Template for release notes\n- Script to aggregate commits/issues\n- Provide manual edit stage\n- Publish with release tag"; labels = @("story", "devops", "documentation", "releases") }
+    @{ title = "Feature 4.3: Code Quality"; body = "**As a developer, I want code quality checks so that the codebase remains maintainable.**\n\nThis feature covers linting, validation, and documentation quality."; labels = @("feature", "devops", "quality") }
+    @{ title = "Story 4.3.1: Syntax Validation"; body = "**As a developer, I want syntax validation so that atopile files are correct**\n\n## Acceptance Criteria:\n- [ ] CI fails on invalid syntax\n- [ ] Pre-commit hook optional\n- [ ] Error messages surfaced clearly\n- [ ] Coverage of all .ato files\n- [ ] Report generated for failures\n\n## Technical Requirements:\n- Use atopile CLI for validation\n- Script to discover files\n- Integrate into build workflow\n- Provide local run instructions"; labels = @("story", "devops", "quality", "syntax") }
+    @{ title = "Story 4.3.2: Component Validation"; body = "**As a developer, I want component validation so that all parts have proper connections**\n\n## Acceptance Criteria:\n- [ ] Automated check for unconnected pins\n- [ ] Warnings vs errors categorized\n- [ ] Report lists offending components\n- [ ] Integration with PR feedback\n- [ ] Tests for validation script\n\n## Technical Requirements:\n- Parse netlist output\n- Identify orphan or floating nets\n- Provide JSON & markdown outputs\n- Exit codes reflect severity"; labels = @("story", "devops", "quality", "validation") }
+    @{ title = "Story 4.3.3: Documentation Checks"; body = "**As a developer, I want documentation checks so that all components are properly documented**\n\n## Acceptance Criteria:\n- [ ] Verify presence of key docs (README, PART_PICKING_GUIDE)\n- [ ] Ensure component files have headers\n- [ ] Spellcheck major docs (optional)\n- [ ] CI summary of missing docs\n- [ ] Threshold for pass/fail defined\n\n## Technical Requirements:\n- Script scans docs directory\n- Provide allowlist/ignore patterns\n- Output structured report\n- Integrate with status checks"; labels = @("story", "devops", "documentation", "quality") }
+    
+    # Feature 5.1: Hardware Testing
+    @{ title = "Feature 5.1: Hardware Testing"; body = "**As a developer, I want hardware validation so that the PCB design works correctly.**\n\nThis feature includes electrical and functional hardware tests."; labels = @("feature", "testing", "hardware") }
+    @{ title = "Story 5.1.1: Continuity Testing"; body = "**As a developer, I want continuity testing so that all connections are properly made**\n\n## Acceptance Criteria:\n- [ ] Net continuity list generated\n- [ ] Automated probing script (future)\n- [ ] Documented manual test procedure\n- [ ] Log of tested nets\n- [ ] Issues created for failures\n\n## Technical Requirements:\n- Use schematic/netlist export\n- Provide checklist template\n- Optional integration with test jig\n- Store results in /test/artifacts"; labels = @("story", "testing", "hardware", "continuity") }
+    @{ title = "Story 5.1.2: Power Supply Testing"; body = "**As a developer, I want power supply testing so that all components receive correct voltages**\n\n## Acceptance Criteria:\n- [ ] Voltage rails measured within tolerance\n- [ ] Load test at max current\n- [ ] Ripple/noise characterized\n- [ ] Thermal check under load\n- [ ] Report documented\n\n## Technical Requirements:\n- Provide measurement points list\n- Use electronic load or resistive loads\n- Document instrumentation used\n- Capture waveform screenshots"; labels = @("story", "testing", "hardware", "power") }
+    @{ title = "Story 5.1.3: Motor Driver Testing"; body = "**As a developer, I want motor driver testing so that motors can be controlled independently**\n\n## Acceptance Criteria:\n- [ ] Each motor spins independently\n- [ ] Direction control verified\n- [ ] Current draw within spec\n- [ ] Thermal performance acceptable\n- [ ] Shutdown behavior tested\n\n## Technical Requirements:\n- Provide motor test script\n- Measure current with inline sensor\n- Log RPM vs duty cycle\n- Capture thermal images (optional)"; labels = @("story", "testing", "hardware", "motors") }
+    @{ title = "Story 5.1.4: Sensor Testing"; body = "**As a developer, I want sensor testing so that IMU readings are accurate**\n\n## Acceptance Criteria:\n- [ ] Accelerometer axes verified\n- [ ] Gyro stability checked\n- [ ] Magnetometer calibration validated\n- [ ] Barometer altitude drift measured\n- [ ] Test results documented\n\n## Technical Requirements:\n- Provide calibration scripts\n- Procedure for stationary vs dynamic tests\n- Data logging format defined\n- Statistical summary of noise"; labels = @("story", "testing", "hardware", "sensors") }
+    @{ title = "Feature 5.2: Software Testing"; body = "**As a developer, I want software validation so that flight control algorithms work correctly.**\n\nThis feature covers unit, integration, and simulation tests."; labels = @("feature", "testing", "software") }
+    @{ title = "Story 5.2.1: Unit Tests for Sensor Drivers"; body = "**As a developer, I want unit tests for sensor drivers so that readings are accurate**\n\n## Acceptance Criteria:\n- [ ] Mock interfaces for sensors\n- [ ] Tests cover edge cases & errors\n- [ ] Calibration functions tested\n- [ ] Continuous integration run\n- [ ] Coverage targets defined\n\n## Technical Requirements:\n- Testing framework selected\n- Provide hardware abstraction layer\n- Use fixture data sets\n- Generate coverage report"; labels = @("story", "testing", "software", "sensors") }
+    @{ title = "Story 5.2.2: Unit Tests for Motor Control"; body = "**As a developer, I want unit tests for motor control so that commands are executed correctly**\n\n## Acceptance Criteria:\n- [ ] PWM generation logic tested\n- [ ] Safety checks covered\n- [ ] Direction mapping verified\n- [ ] Limit handling validated\n- [ ] Regression tests added\n\n## Technical Requirements:\n- Mock motor driver layer\n- Provide deterministic timing harness\n- Simulate fault conditions\n- Report coverage metrics"; labels = @("story", "testing", "software", "motors") }
+    @{ title = "Story 5.2.3: Integration Tests for Flight Control"; body = "**As a developer, I want integration tests for flight control so that stabilization works**\n\n## Acceptance Criteria:\n- [ ] Full control loop test harness\n- [ ] Simulated sensor input sequences\n- [ ] Output matches expected corrections\n- [ ] Latency within target budget\n- [ ] Logs stored for analysis\n\n## Technical Requirements:\n- Simulation environment design\n- Deterministic timing scheduler\n- Compare outputs vs golden data\n- Provide failure diagnostics"; labels = @("story", "testing", "software", "integration") }
+    @{ title = "Story 5.2.4: Simulation Testing"; body = "**As a developer, I want simulation testing so that I can validate control algorithms safely**\n\n## Acceptance Criteria:\n- [ ] Physics model approximates dynamics\n- [ ] Supports scripted flight scenarios\n- [ ] Performance metrics collected\n- [ ] Helps tuning PID parameters\n- [ ] Document simulation limitations\n\n## Technical Requirements:\n- Select simulation framework\n- Implement simplified dynamics model\n- Data export for analysis\n- Scenario scripting interface"; labels = @("story", "testing", "software", "simulation") }
+    @{ title = "Feature 5.3: Safety Testing"; body = "**As a developer, I want safety validation so that the drone operates without causing harm.**\n\nThis feature addresses testing of safety-critical behaviors."; labels = @("feature", "testing", "safety") }
+    @{ title = "Story 5.3.1: Fail-safe Testing"; body = "**As a developer, I want fail-safe testing so that the drone lands safely when problems occur**\n\n## Acceptance Criteria:\n- [ ] Simulated signal loss scenarios\n- [ ] Controlled descent verified\n- [ ] Data logging of fail-safe events\n- [ ] Recovery conditions validated\n- [ ] Test script documented\n\n## Technical Requirements:\n- Inject faults in control input stream\n- Monitor state machine transitions\n- Time descent profile\n- Store test artifacts"; labels = @("story", "testing", "safety", "failsafe") }
+    @{ title = "Story 5.3.2: Emergency Stop Testing"; body = "**As a developer, I want emergency stop testing so that the drone can be immediately shut down**\n\n## Acceptance Criteria:\n- [ ] Test hardware/software trigger\n- [ ] Response time measured\n- [ ] Motors fully stop as expected\n- [ ] Recovery procedure validated\n- [ ] Repeatability confirmed\n\n## Technical Requirements:\n- Instrument timing measurement\n- Simulate multiple activations\n- Capture system state pre/post\n- Provide safety notes"; labels = @("story", "testing", "safety", "emergency-stop") }
+    @{ title = "Story 5.3.3: Range Testing"; body = "**As a developer, I want range testing so that the drone doesn't fly beyond communication range**\n\n## Acceptance Criteria:\n- [ ] Measure control link RSSI vs distance\n- [ ] Document maximum reliable range\n- [ ] Fail-safe triggers near limit\n- [ ] Environmental factors noted\n- [ ] Report archived\n\n## Technical Requirements:\n- Log signal strength metrics\n- Use waypoint or path test\n- Provide safe test environment plan\n- Analyze packet loss versus distance"; labels = @("story", "testing", "wireless", "range") }
+    @{ title = "Story 5.3.4: Battery Monitoring"; body = "**As a developer, I want battery monitoring so that the drone lands before power is exhausted**\n\n## Acceptance Criteria:\n- [ ] Low-voltage warning threshold\n- [ ] Critical voltage triggers landing\n- [ ] Voltage measurement calibrated\n- [ ] Telemetry includes battery stats\n- [ ] Test discharge profile recorded\n\n## Technical Requirements:\n- ADC sampling circuit specs\n- Calibration offset storage\n- Smoothing/averaging filter\n- Configurable thresholds"; labels = @("story", "testing", "battery", "safety") }
+    
+    # Feature 6.1: Build Instructions
+    @{ title = "Feature 6.1: Build Instructions"; body = "**As a builder, I want step-by-step instructions so that I can construct the drone correctly.**\n\nThis feature covers hardware assembly documentation."; labels = @("feature", "documentation", "build") }
+    @{ title = "Story 6.1.1: PCB Assembly Instructions"; body = "**As a builder, I want PCB assembly instructions so that I can populate the board correctly**\n\n## Acceptance Criteria:\n- [ ] Ordered assembly steps\n- [ ] Visual placement diagrams\n- [ ] Soldering guidelines included\n- [ ] Post-assembly checklist\n- [ ] Document versioned\n\n## Technical Requirements:\n- Export annotated placement images\n- Provide PDF + markdown versions\n- Include ESD handling notes\n- Link to troubleshooting section"; labels = @("story", "documentation", "assembly") }
+    @{ title = "Story 6.1.2: Component Sourcing Guide"; body = "**As a builder, I want component sourcing guide so that I can obtain all necessary parts**\n\n## Acceptance Criteria:\n- [ ] Supplier links for each part\n- [ ] Alternative components listed\n- [ ] Price tiers for quantities\n- [ ] Lead time considerations\n- [ ] Guide kept updated\n\n## Technical Requirements:\n- Pull data from BOM if possible\n- Provide CSV export\n- Highlight critical/long lead items\n- Include anti-counterfeit tips"; labels = @("story", "documentation", "sourcing") }
+    @{ title = "Story 6.1.3: Mechanical Assembly Instructions"; body = "**As a builder, I want mechanical assembly instructions so that I can attach motors and frame**\n\n## Acceptance Criteria:\n- [ ] Motor/frame assembly steps\n- [ ] Fastener list & torque guidance\n- [ ] Orientation diagrams\n- [ ] Cable routing guidance\n- [ ] Safety precautions\n\n## Technical Requirements:\n- Provide exploded view diagrams\n- Include recommended tools list\n- Document vibration mitigation\n- Include maintenance notes"; labels = @("story", "documentation", "mechanical", "assembly") }
+    @{ title = "Story 6.1.4: Troubleshooting Guide"; body = "**As a builder, I want troubleshooting guide so that I can diagnose and fix problems**\n\n## Acceptance Criteria:\n- [ ] Common issues table\n- [ ] Diagnostic flowcharts\n- [ ] LED/status indicator meaning\n- [ ] Recovery procedures\n- [ ] Escalation path\n\n## Technical Requirements:\n- Structured by subsystem\n- Provide error code references\n- Include data collection steps\n- Link to issue tracker"; labels = @("story", "documentation", "troubleshooting") }
+    @{ title = "Feature 6.2: Software Setup"; body = "**As a user, I want software installation instructions so that I can program and configure the drone.**\n\nThis feature covers firmware flashing and configuration."; labels = @("feature", "documentation", "software-setup") }
+    @{ title = "Story 6.2.1: Firmware Installation Instructions"; body = "**As a user, I want firmware installation instructions so that I can program the Pico 2W**\n\n## Acceptance Criteria:\n- [ ] Flashing steps for UF2/bootloader\n- [ ] Required toolchain listed\n- [ ] Verification procedure\n- [ ] Troubleshooting flashing failures\n- [ ] Security considerations\n\n## Technical Requirements:\n- Provide CLI commands\n- Include screenshot examples\n- Support Windows/macOS/Linux\n- Document firmware versioning"; labels = @("story", "documentation", "firmware", "setup") }
+    @{ title = "Story 6.2.2: WiFi Configuration Instructions"; body = "**As a user, I want WiFi configuration instructions so that I can connect to the drone**\n\n## Acceptance Criteria:\n- [ ] AP vs Client documented\n- [ ] Config editing steps\n- [ ] Credential storage explanation\n- [ ] Verification test\n- [ ] Troubleshooting connectivity\n\n## Technical Requirements:\n- Provide config file format\n- Include sample configs\n- Security best practices\n- Recovery instructions"; labels = @("story", "documentation", "wifi", "setup") }
+    @{ title = "Story 6.2.3: Calibration Procedures"; body = "**As a user, I want calibration procedures so that sensors provide accurate readings**\n\n## Acceptance Criteria:\n- [ ] Step-by-step instructions per sensor\n- [ ] Visual orientation guidance\n- [ ] Data validation steps\n- [ ] Storage of calibration data\n- [ ] Recalibration triggers documented\n\n## Technical Requirements:\n- Provide calibration scripts\n- Define data format\n- Error handling guidance\n- Environmental considerations"; labels = @("story", "documentation", "calibration", "sensors") }
+    @{ title = "Story 6.2.4: Tuning Guide"; body = "**As a user, I want tuning guide so that I can optimize flight performance**\n\n## Acceptance Criteria:\n- [ ] PID tuning steps\n- [ ] Symptom vs adjustment table\n- [ ] Logging guidance for analysis\n- [ ] Safe test environment tips\n- [ ] Example tuned profiles\n\n## Technical Requirements:\n- Provide initial gain presets\n- Describe oscillation indicators\n- Tools for log visualization\n- Include caution notes"; labels = @("story", "documentation", "tuning", "performance") }
+    @{ title = "Feature 6.3: Operation Manual"; body = "**As an operator, I want operating instructions so that I can fly the drone safely and effectively.**\n\nThis feature covers operational procedures and safety guidelines."; labels = @("feature", "documentation", "operation") }
+    @{ title = "Story 6.3.1: Pre-flight Checklist"; body = "**As an operator, I want pre-flight checklist so that I can ensure the drone is ready to fly**\n\n## Acceptance Criteria:\n- [ ] Checklist items grouped logically\n- [ ] Covers hardware, software, environment\n- [ ] Printable and mobile-friendly\n- [ ] Version controlled\n- [ ] Includes safety confirmations\n\n## Technical Requirements:\n- Provide markdown + PDF\n- Include placeholders for signatures\n- Link to troubleshooting for failures\n- Allow customization"; labels = @("story", "documentation", "checklist", "safety") }
+    @{ title = "Story 6.3.2: Flight Control Instructions"; body = "**As an operator, I want flight control instructions so that I can pilot the drone effectively**\n\n## Acceptance Criteria:\n- [ ] Explanation of all control axes\n- [ ] Basic maneuvers described\n- [ ] Mode-specific behavior differences\n- [ ] Recovery techniques\n- [ ] Visual diagrams included\n\n## Technical Requirements:\n- Provide diagrams or GIFs (future)\n- Clarify safety boundaries\n- Include glossary of terms\n- Link to tuning section"; labels = @("story", "documentation", "controls", "operation") }
+    @{ title = "Story 6.3.3: Safety Guidelines"; body = "**As an operator, I want safety guidelines so that I can operate the drone responsibly**\n\n## Acceptance Criteria:\n- [ ] Regulatory considerations\n- [ ] Environmental hazard warnings\n- [ ] Battery handling guidelines\n- [ ] Emergency procedures overview\n- [ ] Legal compliance references\n\n## Technical Requirements:\n- Provide region-agnostic advice\n- Highlight mandatory compliance checks\n- Include disclaimers\n- Encourage community best practices"; labels = @("story", "documentation", "safety", "guidelines") }
+    @{ title = "Story 6.3.4: Maintenance Procedures"; body = "**As an operator, I want maintenance procedures so that I can keep the drone in good condition**\n\n## Acceptance Criteria:\n- [ ] Scheduled maintenance intervals\n- [ ] Component inspection checklist\n- [ ] Cleaning and storage practices\n- [ ] Replacement part guidance\n- [ ] Logging of maintenance actions\n\n## Technical Requirements:\n- Provide maintenance log template\n- Recommend consumables/tools\n- Document wear indicators\n- Include end-of-life disposal notes"; labels = @("story", "documentation", "maintenance", "operation") }
     
     # Epic 3: Wireless Communication & Control
     @{
@@ -424,22 +552,27 @@ This epic covers all documentation including build instructions, user guides, an
 )
 
 # Create issues
-Write-Host "Creating GitHub issues..." -ForegroundColor Green
-$issueCount = 0
+Write-Host "Creating GitHub issues (idempotent)..." -ForegroundColor Green
+$createdCount = 0
+$skippedCount = 0
+$startTime = Get-Date
 
 foreach ($issue in $issues) {
     try {
         $labelArgs = $issue.labels | ForEach-Object { "--label", $_ }
         
-        Write-Host "Creating: $($issue.title)" -ForegroundColor Cyan
-        
-        $result = gh issue create --title $issue.title --body $issue.body @labelArgs --repo "$Owner/$Repo"
-        
-        if ($LASTEXITCODE -eq 0) {
-            $issueCount++
-            Write-Host "✓ Created: $($issue.title)" -ForegroundColor Green
+        if ($existingIssueTitles -contains $issue.title) {
+            Write-Host "↷ Skipping (exists): $($issue.title)" -ForegroundColor Yellow
+            $skippedCount++
         } else {
-            Write-Warning "Failed to create: $($issue.title)"
+            Write-Host "Creating: $($issue.title)" -ForegroundColor Cyan
+            $result = gh issue create --title $issue.title --body $issue.body @labelArgs --repo "$Owner/$Repo" 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $createdCount++
+                Write-Host "✓ Created: $($issue.title)" -ForegroundColor Green
+            } else {
+                Write-Warning "Failed to create: $($issue.title)"
+            }
         }
         
         # Small delay to avoid rate limiting
@@ -450,5 +583,22 @@ foreach ($issue in $issues) {
     }
 }
 
-Write-Host "`n🚀 Successfully created $issueCount GitHub issues!" -ForegroundColor Green
-Write-Host "View them at: https://github.com/$Owner/$Repo/issues" -ForegroundColor Cyan
+$elapsed = (Get-Date) - $startTime
+Write-Host "`n🚀 Issue creation complete" -ForegroundColor Green
+Write-Host "Created: $createdCount  Skipped: $skippedCount  Total Defined: $($issues.Count)  Elapsed: {0:n1}s" -f $elapsed.TotalSeconds -ForegroundColor Cyan
+Write-Host "View issues: https://github.com/$Owner/$Repo/issues" -ForegroundColor Cyan
+
+if ($SummaryPath) {
+    $summary = [pscustomobject]@{
+        repository = "$Owner/$Repo";
+        created    = $createdCount;
+        skipped    = $skippedCount;
+        totalDefined = $issues.Count;
+        elapsedSeconds = [math]::Round($elapsed.TotalSeconds,1);
+        timestamp = (Get-Date).ToString('o')
+    }
+    try {
+        $summary | ConvertTo-Json -Depth 4 | Out-File -FilePath $SummaryPath -Encoding UTF8
+        Write-Host "Summary JSON written to $SummaryPath" -ForegroundColor Green
+    } catch { Write-Warning "Failed to write summary file: $($_.Exception.Message)" }
+}
