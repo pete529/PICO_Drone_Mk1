@@ -1,0 +1,38 @@
+# Git ignore for PICO_Drone_Mk1
+
+# Atopile build artifacts
+build/
+**/build/
+*.pcba.glb
+*.variables.md
+*.i2c_tree.md
+
+# KiCad generated / backup files
+*.bak
+*-backups/
+_autosave-*
+*.kicad_prl
+*.kicad_pcb-bak
+*.kicad_sch-bak
+
+# Temporary / editor files
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Python cache (if scripts get added)
+__pycache__/
+*.py[cod]
+
+# Logs
+*.log
+
+# Node modules (future tooling?)
+node_modules/
+
+# VSCode / tooling state (keep rules directories if intentional)
+.vscode/
+.windsurf/cache/
+.cursor/cache/
+

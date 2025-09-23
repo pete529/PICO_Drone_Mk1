@@ -1,0 +1,57 @@
+name: Release Packaging
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Atopile
+        run: |
+          python -m pip install --upgrade pip
+          pip install atopile==0.12.4
+
+      - name: Build PCB
+        working-directory: "PCB Design/quadcopter_pcb"
+        run: |
+          ato build --no-color
+
+      - name: Prepare artifact bundle
+        run: |
+          mkdir dist
+          copy "PCB Design/quadcopter_pcb/build/builds/default" dist/builds -Recurse
+          echo "Version: ${GITHUB_REF#refs/tags/}" > dist/RELEASE_INFO.txt
+        shell: pwsh
+
+      - name: Archive bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/builds/default/*.kicad_pcb
+            dist/builds/default/*.bom.csv
+            dist/builds/default/*.variables.md
+            dist/builds/default/*.i2c_tree.md
+            dist/builds/default/*.pcba.glb
+            dist/RELEASE_INFO.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

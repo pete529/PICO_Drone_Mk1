@@ -1,0 +1,70 @@
+name: Auto Version Bump
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
+
+      - name: Read current version
+        id: ver
+        run: |
+          echo "current=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Determine next version
+        id: calc
+        run: |
+          CURRENT=$(cat VERSION)
+          echo "Current version: $CURRENT"
+          MAJOR=$(echo $CURRENT | cut -d. -f1)
+          MINOR=$(echo $CURRENT | cut -d. -f2)
+          PATCH=$(echo $CURRENT | cut -d. -f3)
+          # Gather commit messages since last tag or version file change
+          RANGE=$(git log -50 --pretty=%s)
+          BUMP="patch"
+          echo "$RANGE" | grep -Ei 'BREAKING CHANGE|!: ' && BUMP="major" || true
+          if [ "$BUMP" = "patch" ]; then echo "$RANGE" | grep -Ei '^feat' && BUMP="minor" || true; fi
+          if [ "$BUMP" = "major" ]; then MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0; \
+          elif [ "$BUMP" = "minor" ]; then MINOR=$((MINOR+1)); PATCH=0; \
+          else PATCH=$((PATCH+1)); fi
+          NEXT="$MAJOR.$MINOR.$PATCH"
+          echo "next=$NEXT" >> $GITHUB_OUTPUT
+
+      - name: Update VERSION file if changed
+        run: |
+          if [ "${{ steps.calc.outputs.next }}" != "${{ steps.ver.outputs.current }}" ]; then
+            echo "${{ steps.calc.outputs.next }}" > VERSION
+          else
+            echo "No version change needed"; exit 0
+          fi
+
+      - name: Commit & tag new version
+        if: steps.calc.outputs.next != steps.ver.outputs.current
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add VERSION
+          git commit -m "chore(release): bump version to ${{ steps.calc.outputs.next }}"
+          git tag -a v${{ steps.calc.outputs.next }} -m "Release v${{ steps.calc.outputs.next }}"
+
+      - name: Push changes
+        if: steps.calc.outputs.next != steps.ver.outputs.current
+        run: |
+          git push origin HEAD:main
+          git push origin --tags
+
+      - name: Summary
+        run: |
+          echo "Current: ${{ steps.ver.outputs.current }}" >> $GITHUB_STEP_SUMMARY
+          echo "Next: ${{ steps.calc.outputs.next }}" >> $GITHUB_STEP_SUMMARY
