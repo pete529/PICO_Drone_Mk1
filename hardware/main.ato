@@ -4,6 +4,29 @@ Comprehensive signal definition for complete quadcopter design.
 This will generate a proper netlist for KiCad implementation.
 """
 
+#pragma experiment("TRAITS")
+
+# Component module imports
+from "atopile/components/pico2w.ato" import Pico2W
+from "atopile/components/drv8833.ato" import Drv8833
+from "atopile/components/gy91.ato" import Gy91
+from "atopile/components/amigo_pro.ato" import AmigoPro
+from "atopile/components/leds.ato" import Led0603
+from "atopile/components/switch.ato" import SwitchSpst
+from "atopile/components/headers.ato" import Header2P
+from "lib/r_test.ato" import RTest
+
+# Import custom components from our library
+from "atopile/components/pico2w.ato" import Pico2W
+from "atopile/components/drv8833.ato" import Drv8833
+from "atopile/components/gy91.ato" import Gy91
+from "atopile/components/leds.ato" import Led0603
+from "atopile/components/switch.ato" import SwitchSpst
+from "atopile/components/headers.ato" import Header2P
+from "atopile/components/amigo_pro.ato" import AmigoPro
+from "atopile/components/resistor.ato" import Resistor0603
+from "lib/r_test.ato" import RTest
+
 module App:
     """Main quadcopter flight controller board"""
     
@@ -139,6 +162,27 @@ module App:
     # ===========================================
     # SIGNAL CONNECTIONS (NETLIST)
     # ===========================================
+    # ===========================================
+    # COMPONENT INSTANTIATIONS (initial)
+    # ===========================================
+    pico = new Pico2W                  # Raspberry Pi Pico 2W module
+    drv_left = new Drv8833             # Left side DRV8833 (motors L1, L2)
+    drv_right = new Drv8833            # Right side DRV8833 (motors R1, R2)
+    imu = new Gy91                     # GY-91 module (includes IMU + baro)
+    power = new AmigoPro               # LiPo Amigo Pro power module
+    led_red = new Led0603              # Red status LED
+    led_green = new Led0603            # Green status LED
+    pwr_switch = new SwitchSpst        # Power switch
+    motor_l1_conn = new Header2P       # Motor Left 1 connector
+    motor_l2_conn = new Header2P       # Motor Left 2 connector
+    motor_r1_conn = new Header2P       # Motor Right 1 connector
+    motor_r2_conn = new Header2P       # Motor Right 2 connector
+    # Passive components with constraints for picker
+    r_led_red = new Resistor0603       # Red LED series resistor
+    r_led_green = new Resistor0603     # Green LED series resistor
+    r_button_pullup = new Resistor0603 # Button pull-up resistor
+    r_experiment = new RTest           # Experimental test part for picker
+
     # Connect I2C bus
     ICM20946_SDA ~ PICO_GP26_SDA
     ICM20946_SCL ~ PICO_GP27_SCL
@@ -159,22 +203,63 @@ module App:
     PICO_GP8 ~ DRV8833_L_SLEEP
     PICO_GP9 ~ DRV8833_R_SLEEP
     
-    # Connect LED controls
-    PICO_GP14 ~ LED_RED_RESISTOR
-    PICO_GP15 ~ LED_GREEN_RESISTOR
+    # LED circuits: Red (GPIO controlled) and Green (power indicator always on)
+    pico.GP14 ~ r_led_red.1
+    r_led_red.2 ~ led_red.A
+    led_red.K ~ GND
+
+    r_led_green.1 ~ VCC_3V3
+    r_led_green.2 ~ led_green.A
+    led_green.K ~ GND
     
     # Connect button
-    PICO_GP13 ~ BUTTON_PWR_SW2
+    pico.GP13 ~ pwr_switch.2
+    pwr_switch.1 ~ VBAT
+    r_button_pullup.1 ~ pico.GP13
+    r_button_pullup.2 ~ VCC_3V3
     
     # Connect sensor interrupt
     PICO_GP16 ~ ICM20946_INT
     
-    # Motor outputs to connectors
-    MOTOR_L1_AOUT ~ MOTOR_L1_CONNECTOR_1
-    MOTOR_L1_BOUT ~ MOTOR_L1_CONNECTOR_2
-    MOTOR_L2_AOUT ~ MOTOR_L2_CONNECTOR_1
-    MOTOR_L2_BOUT ~ MOTOR_L2_CONNECTOR_2
-    MOTOR_R1_AOUT ~ MOTOR_R1_CONNECTOR_1
-    MOTOR_R1_BOUT ~ MOTOR_R1_CONNECTOR_2
-    MOTOR_R2_AOUT ~ MOTOR_R2_CONNECTOR_1
-    MOTOR_R2_BOUT ~ MOTOR_R2_CONNECTOR_2
+    # Instance-level motor driver wiring (control signals)
+    pico.GP0 ~ drv_left.AIN1
+    pico.GP1 ~ drv_left.AIN2
+    pico.GP2 ~ drv_left.BIN1
+    pico.GP3 ~ drv_left.BIN2
+    pico.GP4 ~ drv_right.AIN1
+    pico.GP5 ~ drv_right.AIN2
+    pico.GP6 ~ drv_right.BIN1
+    pico.GP7 ~ drv_right.BIN2
+    pico.GP8 ~ drv_left.SLEEP
+    pico.GP9 ~ drv_right.SLEEP
+
+    # Motor driver outputs direct to motor connectors
+    drv_left.AOUT1 ~ motor_l1_conn.1
+    drv_left.AOUT2 ~ motor_l1_conn.2
+    drv_left.BOUT1 ~ motor_l2_conn.1
+    drv_left.BOUT2 ~ motor_l2_conn.2
+    drv_right.AOUT1 ~ motor_r1_conn.1
+    drv_right.AOUT2 ~ motor_r1_conn.2
+    drv_right.BOUT1 ~ motor_r2_conn.1
+    drv_right.BOUT2 ~ motor_r2_conn.2
+
+    # I2C bus and IMU interrupt (retain existing high-level signals if needed)
+    pico.SDA ~ imu.SDA
+    pico.SCL ~ imu.SCL
+    pico.GP16 ~ imu.INT
+
+    # Power rails
+    power.VBAT_OUT ~ VSYS
+    pico.VSYS ~ VSYS
+    power.V5 ~ VCC_5V
+    drv_left.VM ~ VCC_5V
+    drv_right.VM ~ VCC_5V
+    pico.V3V3 ~ VCC_3V3
+    imu.VCC ~ VCC_3V3
+
+    # Grounds
+    power.GND ~ GND
+    pico.GND ~ GND
+    drv_left.GND ~ GND
+    drv_right.GND ~ GND
+    imu.GND ~ GND

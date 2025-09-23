@@ -29,6 +29,22 @@ jobs:
         run: |
           ato build --no-color
 
+      - name: Fail if BOM empty
+        shell: bash
+        run: |
+          BOM="hardware/build/builds/default/default.bom.csv"
+          if [ ! -s "$BOM" ]; then
+            echo "BOM file missing or empty: $BOM" >&2
+            exit 1
+          fi
+          # Count non-empty, non-comment lines (in case header appears)
+          COUNT=$(grep -v '^#' "$BOM" | sed '/^$/d' | wc -l || true)
+          if [ "$COUNT" -le 1 ]; then
+            echo "BOM appears to have no component rows (lines: $COUNT)" >&2
+            exit 1
+          fi
+          echo "BOM check passed with $COUNT lines"
+
       - name: Upload build artifacts (KiCad + reports)
         if: always()
         uses: actions/upload-artifact@v4

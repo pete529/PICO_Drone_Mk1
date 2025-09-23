@@ -1,1 +1,4 @@
-define header2_symbol: part: conn.header_2p
+component Header2P:
+	# 2-pin generic connector
+	pin 1
+	pin 2

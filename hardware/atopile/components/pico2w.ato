@@ -1,1 +1,25 @@
-define pico2w_symbol: part: raspberrypi.pico2w
+component Pico2W:
+	# Raspberry Pi Pico 2W (simplified pin subset for control + power)
+	# NOTE: metadata (designator/value/footprint) removed; real part binding will come from a package.
+	pin GP0
+	pin GP1
+	pin GP2
+	pin GP3
+	pin GP4
+	pin GP5
+	pin GP6
+	pin GP7
+	pin GP8
+	pin GP9
+	pin GP13
+	pin GP14
+	pin GP15
+	pin GP16
+	pin GP17
+	pin GP18
+	pin SDA
+	pin SCL
+	pin VBUS
+	pin VSYS
+	pin V3V3
+	pin GND

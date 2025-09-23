@@ -1,1 +1,4 @@
-define leds_symbol: part: led.0603_generic
+component Led0603:
+	# Simple LED (abstract). Real value/package resolved via future part binding.
+	pin A
+	pin K

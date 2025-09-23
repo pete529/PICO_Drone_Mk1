@@ -1,1 +1,7 @@
-define gy91_symbol: part: generic.gy91_module
+component Gy91:
+	# GY-91 (IMU + barometer carrier) - abstract interface only.
+	pin SDA
+	pin SCL
+	pin INT
+	pin VCC
+	pin GND

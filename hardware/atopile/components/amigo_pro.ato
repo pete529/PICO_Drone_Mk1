@@ -1,1 +1,7 @@
-define amigo_pro_symbol: part: pimoroni.lipo_amigo_pro
+component AmigoPro:
+	# LiPo Amigo Pro Power Module (abstracted)
+	pin VBAT_IN
+	pin VBAT_OUT
+	pin V5
+	pin GND
+	pin CHG_STATUS

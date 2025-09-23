@@ -1,1 +1,4 @@
-define switch_symbol: part: switch.spst_slide_smd
+component SwitchSpst:
+	# SPST slide switch (abstract)
+	pin 1
+	pin 2

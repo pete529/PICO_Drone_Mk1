@@ -1,1 +1,14 @@
-define drv8833_symbol: part: ti.drv8833_htssop16
+component Drv8833:
+	# DRV8833 dual H-bridge (simplified). Real part selection will come from a package or explicit part binding.
+	pin AIN1
+	pin AIN2
+	pin BIN1
+	pin BIN2
+	pin SLEEP
+	pin nFAULT
+	pin AOUT1
+	pin AOUT2
+	pin BOUT1
+	pin BOUT2
+	pin VM
+	pin GND

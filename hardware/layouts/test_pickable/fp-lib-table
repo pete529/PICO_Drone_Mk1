@@ -1,0 +1,10 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "Resistor_SMD")(type "KiCad")(uri "${KICAD_FOOTPRINT_DIR}/Resistor_SMD.pretty")(options "")(descr "Surface mounted resistors"))
+  (lib (name "LED_SMD")(type "KiCad")(uri "${KICAD_FOOTPRINT_DIR}/LED_SMD.pretty")(options "")(descr "Surface mounted LEDs"))
+  (lib (name "Button_Switch_SMD")(type "KiCad")(uri "${KICAD_FOOTPRINT_DIR}/Button_Switch_SMD.pretty")(options "")(descr "Surface mounted buttons and switches"))
+  (lib (name "Package_SO")(type "KiCad")(uri "${KICAD_FOOTPRINT_DIR}/Package_SO.pretty")(options "")(descr "Small outline packages"))
+  (lib (name "Package_DFN_QFN")(type "KiCad")(uri "${KICAD_FOOTPRINT_DIR}/Package_DFN_QFN.pretty")(options "")(descr "DFN and QFN packages"))
+  (lib (name "Connector_PinHeader_2.54mm")(type "KiCad")(uri "${KICAD_FOOTPRINT_DIR}/Connector_PinHeader_2.54mm.pretty")(options "")(descr "Pin headers 2.54mm pitch"))
+  (lib (name "Module")(type "KiCad")(uri "${KICAD_FOOTPRINT_DIR}/Module.pretty")(options "")(descr "Modules and development boards"))
+)

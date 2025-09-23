@@ -1,0 +1,15 @@
+module TestPickableResistor:
+    # Minimal resistor with constraints to allow picker to resolve a part
+    r = new Resistor
+    # Provide a realistic tolerance so picker can find matching catalogue parts
+    r.resistance = 1kohm +/- 5%
+    # Constrain package (common size)
+    r.package = "0603"
+    # Simple pass-through electrical interface so we can wire it if needed
+    left = new Electrical
+    right = new Electrical
+    left ~ r.unnamed[0]
+    right ~ r.unnamed[1]
+
+module TestPickableApp:
+    test = new TestPickableResistor

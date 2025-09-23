@@ -1,0 +1,4 @@
+# Experimental resistor part to probe picker behavior
+component RTest:
+    pin 1
+    pin 2

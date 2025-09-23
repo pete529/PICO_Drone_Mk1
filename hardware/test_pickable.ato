@@ -1,0 +1,12 @@
+from "atopile/components/resistor.ato" import Resistor0603
+
+module TestPickableApp:
+    # Simple test app to validate part picking with resistor
+    signal VCC
+    signal GND
+    
+    test_resistor = new Resistor0603
+    
+    # Simple connections for test
+    test_resistor.1 ~ VCC
+    test_resistor.2 ~ GND
