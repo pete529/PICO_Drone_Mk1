@@ -12,7 +12,7 @@ GYRO_XOUT_H = 0x43
 TEMP_OUT_H = 0x41
 
 # Initialize I2C (adjust pins as needed)
-i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=400000)
+i2c = I2C(0, scl=Pin(20), sda=Pin(21), freq=400000)
 
 def write_reg(addr, reg, data):
     i2c.writeto_mem(addr, reg, bytes([data]))

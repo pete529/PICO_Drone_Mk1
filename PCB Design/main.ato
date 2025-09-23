@@ -1,0 +1,18 @@
+# Quadcopter Flight Controller PCB (Raspberry Pi Pico 2W)
+# Project: PICO_Drone_Mk1
+# Components will be added incrementally with build verification after each addition
+
+# Component List:
+# - Raspberry Pi Pico 2W (main controller)
+# - 2x DRV8833 dual H-bridge motor drivers
+# - ICM-20946 9-DOF IMU (magnetometer, gyroscope, accelerometer)
+# - BMP280 pressure/temperature sensor
+# - Pimoroni Amigo Pro LiPo charger/power management
+# - Status LEDs (green power, red activity)
+# - Power button
+# - Motor connector headers
+# - Supporting passive components
+
+module QuadcopterBoard:
+    # Starting with minimal module - will add components incrementally
+    pass
