@@ -7,6 +7,11 @@ build/
 *.variables.md
 *.i2c_tree.md
 
+# Keep key design sources even if broader patterns are added later
+!PCB Design/**/main.ato
+!PCB Design/**/*.kicad_pcb
+!PCB Design/**/*.kicad_sch
+
 # KiCad generated / backup files
 *.bak
 *-backups/
@@ -14,6 +19,9 @@ _autosave-*
 *.kicad_prl
 *.kicad_pcb-bak
 *.kicad_sch-bak
+*.tmp
+*.net
+*.xml
 
 # Temporary / editor files
 *.swp
@@ -24,9 +32,47 @@ Thumbs.db
 # Python cache (if scripts get added)
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env/
+.python-version
+
+# Distribution / packaging
+dist/
+build-dist/
+*.egg-info/
+*.egg
+*.whl
+*.tar.gz
+
+# Release archives
+pcb-artifacts.tar.gz
+pcb-artifacts.tar.gz.sha256
 
 # Logs
 *.log
+log/
+logs/
+*.tmp.log
+
+# OS junk
+ehthumbs.db
+Desktop.ini
+
+# IDE specific
+.idea/
+.fleet/
+.history/
+.pytest_cache/
+.mypy_cache/
+coverage.xml
+.coverage*
 
 # Node modules (future tooling?)
 node_modules/
@@ -35,4 +81,19 @@ node_modules/
 .vscode/
 .windsurf/cache/
 .cursor/cache/
+
+# Temporary archives
+*.zip
+*.7z
+*.rar
+*.gz
+*.tgz
+
+# Local scratch
+notes/*.md
+scratch/
+
+# Ensure tracking for key project meta
+!COMPONENT_TASKS.md
+!VERSION
 
