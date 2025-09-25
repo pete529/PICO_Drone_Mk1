@@ -222,6 +222,12 @@ Usage:
 
 # Dry run (no changes), plus write summary and markdown report
 ./create_github_issues_v2.ps1 -StoriesPath user_stories.md -DryRun -SummaryPath issues_summary_v2.json -MarkdownReportPath issues_report_v2.md
+
+# Process a specific chunk (e.g. items 30-44) to avoid long-run hangs
+./create_github_issues_v2.ps1 -StoriesPath user_stories.md -UpdateExisting -ReplaceLabels -FromIndex 30 -LimitItems 15 -SummaryPath chunk_30_44.json
+
+# Run all chunks automatically (default size 15)
+./run_issue_chunks.ps1 -ChunkSize 15 -UpdateExisting -ReplaceLabels
 ```
 
 Tips:
@@ -229,7 +235,182 @@ Tips:
 - Repo resolution: uses the current repo if `-Owner/-Repo` are not provided
 - Labels referenced in Markdown are ensured (created if missing)
 
+### Chunked / Resumable Execution
+
+If very large full runs occasionally stall (external `gh` CLI hang), you can process the backlog in deterministic chunks:
+
+- `-FromIndex N` starts processing at the zero-based index of the parsed markdown items.
+- `-LimitItems K` caps how many items are processed in this invocation.
+- Together they form a window: `[FromIndex, FromIndex + LimitItems)`.
+
+Helper script `run_issue_chunks.ps1` orchestrates sequential chunks:
+
+```powershell
+# Dry run all chunks (no changes)
+./run_issue_chunks.ps1 -ChunkSize 20 -DryRun
+
+# Live update with label reconciliation (body+labels) in 15-item windows
+./run_issue_chunks.ps1 -ChunkSize 15 -UpdateExisting -ReplaceLabels
+
+# Resume only remaining tail manually
+./create_github_issues_v2.ps1 -UpdateExisting -ReplaceLabels -FromIndex 60 -LimitItems 20
+```
+
+Each chunk writes its own summary/report (`issues_summary_v2_chunk_#.json`). You can merge results later if desired. This strategy avoids losing progress to a mid-run stall.
+
+### Additional Resilience & Performance Flags (Advanced)
+
+The v2 script also supports advanced flags to make large synchronizations safer and faster:
+
+| Flag | Purpose | Default | When to Use |
+|------|---------|---------|-------------|
+| `-GhTimeoutSeconds <n>` | Kills and retries any single `gh` CLI call exceeding `n` seconds. | 60 | Full runs that occasionally hang mid-call. |
+| `-SkipUnchanged` | Skips body update when the existing GitHub issue body already matches the markdown (still reconciles labels). | Off | Re-running frequent syncs where most stories are unchanged. |
+
+Examples:
+```powershell
+# Run chunked with a 45s per-call timeout
+./run_issue_chunks.ps1 -ChunkSize 15 -UpdateExisting -ReplaceLabels; \
+	Get-ChildItem issues_summary_v2_chunk_*.json | Select Name
+
+# Direct window with timeout + skip unchanged bodies
+./create_github_issues_v2.ps1 -FromIndex 30 -LimitItems 15 -UpdateExisting -ReplaceLabels -GhTimeoutSeconds 45 -SkipUnchanged
+
+# Speedy dry run sanity check
+./create_github_issues_v2.ps1 -DryRun -SkipUnchanged -StoriesPath user_stories.md
+```
+
+Effect of `-SkipUnchanged`:
+- Performs a lightweight `gh issue view --json body` per issue on update.
+- If trimmed body text matches, body update call is omitted, reducing API/process usage.
+- Labels are still reconciled (added/removed) respecting `-ReplaceLabels`.
+
+Timeout Behavior (`-GhTimeoutSeconds`):
+- Each `gh` invocation is launched in a separate process.
+- If it exceeds the timeout, the process is terminated and retried (subject to `-RetryCount` / backoff).
+- Exit codes `-999` (timeout) and other non-zero values are treated as transient until retries exhausted.
+
 See `user_stories.template.md` for a sample structure.
+
+## GitHub Issues Creation (v2 REST Variant)
+
+To eliminate occasional external `gh` CLI stalls, a REST-native script `create_github_issues_v2_rest.ps1` provides near feature parity plus extra optimization options.
+
+### Why REST?
+| Concern | CLI Variant | REST Variant |
+|---------|-------------|--------------|
+| External process hangs | Possible on long runs | None (direct HTTP) |
+| Per-call timeout | Manual wrapper | Native via `Invoke-RestMethod` timeout |
+| Label ensure | Yes | Yes |
+| Skip unchanged bodies | String compare | String or hash compare (optional) |
+| Hash-based change detection | No | Yes (`-UseBodyHash`) |
+| Parse-only mode | Yes (`-ParseOnly` in CLI via earlier improvements) | Yes (`-ParseOnly`) |
+| Chunk window | Yes | Yes |
+| Replace labels exactly | `-ReplaceLabels` | `-ReplaceLabels` |
+
+### Key Additional Flags
+| Flag | Purpose |
+|------|---------|
+| `-ParseOnly` | Parse markdown and write summaries/reports without any API calls (no token required). |
+| `-UseBodyHash` | Appends an HTML comment `<!-- sync-hash:SHA256 -->` to each issue body. Future runs compare only the hash for fast unchanged detection. |
+| `-SkipUnchanged` | When used with `-UseBodyHash`, hash comparison avoids fetching or diffing large bodies; otherwise falls back to canonical text compare. |
+| `-HttpTimeoutSeconds` | Timeout for each REST call (default 40s) with retries/backoff. |
+| `-FilterTitle "regex"` | Process only items whose title matches the supplied case-insensitive regex (applied before chunk window). |
+
+### Usage Examples
+```powershell
+# 1. Parse-only (no token required) with body hashing to preview generated issues
+./create_github_issues_v2_rest.ps1 -ParseOnly -UseBodyHash -StoriesPath user_stories.md -SummaryPath rest_parse.json
+
+# 2. First real creation pass (creates missing issues only)
+./create_github_issues_v2_rest.ps1 -GitHubToken $env:GITHUB_TOKEN -UseBodyHash -SummaryPath rest_create.json
+
+# 3. Update existing issues (body + label reconciliation) but skip unchanged using hashes
+./create_github_issues_v2_rest.ps1 -UpdateExisting -SkipUnchanged -UseBodyHash -ReplaceLabels -GitHubToken $env:GITHUB_TOKEN -SummaryPath rest_update.json
+
+# 4. Process a specific window (items 30-44) safely
+./create_github_issues_v2_rest.ps1 -UpdateExisting -ReplaceLabels -FromIndex 30 -LimitItems 15 -SkipUnchanged -UseBodyHash -GitHubToken $env:GITHUB_TOKEN -SummaryPath rest_chunk_30_44.json
+
+# 5. Pure dry run (no create/update) but still exercise label ensure logic
+./create_github_issues_v2_rest.ps1 -DryRun -UpdateExisting -ReplaceLabels -UseBodyHash -SkipUnchanged -GitHubToken $env:GITHUB_TOKEN -SummaryPath rest_dryrun.json
+
+# 6. Only sync WiFi or telemetry related items
+./create_github_issues_v2_rest.ps1 -UpdateExisting -ReplaceLabels -FilterTitle "WiFi|Telemetry" -SkipUnchanged -UseBodyHash -GitHubToken $env:GITHUB_TOKEN -SummaryPath rest_wifi.json
+```
+
+### Hash Logic Details
+- Canonical body removes any existing `<!-- sync-hash:... -->` marker before hashing.
+- Hashing uses SHA-256 over UTF-8 bytes of canonical text.
+- The hash marker is appended as a final line to persist change fingerprint.
+- On `-SkipUnchanged -UseBodyHash`, if existing and new hashes match, body update is skipped (labels still reconciled).
+
+### When to Use Hashing
+| Scenario | Recommended? | Benefit |
+|----------|--------------|---------|
+| Large bodies with frequent re-sync | Yes | Fast equality check, minimal diff noise |
+| Many runs with few edits | Yes | Avoids repeated PATCH calls |
+| One-off initial import | Optional | Adds marker but no harm |
+| Bodies manually edited on GitHub | Caution | Manual edits outside canonical format change hash; script will patch body to restore canonical + marker |
+
+### Summary JSON (REST)
+Adds `useBodyHash` boolean to previous schema:
+```json
+{
+	"repository": "owner/repo",
+	"dryRun": true,
+	"updateExisting": false,
+	"replaceLabels": false,
+	"useBodyHash": true,
+	"createdCount": 0,
+	"updatedCount": 0,
+	"skippedCount": 0,
+	"failedCount": 0,
+	"totalFromMarkdown": 71,
+	"elapsedSeconds": 0.4
+}
+```
+
+### Migration Tips
+1. Run a `-ParseOnly -UseBodyHash` to preview and inject hashes locally (no API calls).
+2. Perform a creation run without `-UpdateExisting` to add any new issues.
+3. Follow with `-UpdateExisting -SkipUnchanged -UseBodyHash` for maintenance cycles.
+4. Use chunk windows (`-FromIndex/-LimitItems`) only if you anticipate extremely large future backlogs; REST calls are typically stable without chunking.
+5. Narrow scope with `-FilterTitle` when iterating on a subset (e.g., `-FilterTitle "^Story 3\\.|WiFi"`).
+
+### Troubleshooting (REST)
+| Symptom | Cause | Resolution |
+|---------|-------|------------|
+| Token error | Missing PAT | Provide `-GitHubToken` or set `GH_TOKEN` / `GITHUB_TOKEN` |
+| 403 rate limit | Excessive rapid updates | Add `-ThrottleMs 250` or re-run later |
+| Skips expected update | Hash unchanged | Change markdown body or omit `-SkipUnchanged` once |
+| Marker visible in UI | Expected | It's a harmless HTML comment; remove `-UseBodyHash` for future runs to stop adding it |
+
+The legacy CLI script remains available; prefer the REST variant for reliability on large sets.
+
+### Merging Multiple Runs
+
+Use `merge_issue_summaries.ps1` to consolidate JSON summaries from both CLI and REST scripts.
+
+```powershell
+# Basic merge (auto-glob issues_summary_v2*.json)
+./merge_issue_summaries.ps1
+
+# Specify explicit files
+./merge_issue_summaries.ps1 -Paths issues_summary_v2_rest_parseonly.json,rest_update_live.json
+
+# Include distinct title lists and write to custom output
+./merge_issue_summaries.ps1 -IncludeDetails -Output merged_detailed.json
+
+# Dry run (print to console only)
+./merge_issue_summaries.ps1 -DryRun -Glob "rest_*.json"
+```
+
+Merged output fields:
+- `files`, `totalFiles`
+- `repositories` (file count per repo)
+- `totals` (created/updated/skipped/failed/defined/filtered)
+- `rollup` (net summary)
+- `distinctTitles` (only when `-IncludeDetails`)
 
 ## Roadmap & Development Status
 

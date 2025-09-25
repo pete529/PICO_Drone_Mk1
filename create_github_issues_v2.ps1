@@ -7,7 +7,15 @@ param(
     [switch]$DryRun,
     [string]$SummaryPath = "issues_summary_v2.json",
     [string]$MarkdownReportPath = "issues_report_v2.md",
-    [string]$GitHubToken
+    [string]$GitHubToken,
+    [int]$RetryCount = 5,
+    [int]$InitialRetryDelayMs = 500,
+    [int]$ThrottleMs = 0,
+    [int]$LimitItems = 0,
+    [int]$GhTimeoutSeconds = 60,
+    [switch]$SkipUnchanged,
+    [int]$FromIndex = 0,
+    [switch]$ParseOnly
 )
 
 # v2: Parse Markdown (Epics/Features/Stories) and create/update GitHub issues idempotently
@@ -26,6 +34,7 @@ function Ensure-GhAuth {
     elseif ($env:GITHUB_TOKEN) { $envToken = $env:GITHUB_TOKEN }
 
     if ($envToken) { $env:GH_TOKEN = $envToken }
+    [string]$FilterTitle,
 
     try {
         $status = gh auth status 2>$null
@@ -34,6 +43,55 @@ function Ensure-GhAuth {
     } catch {
         Write-Host "GitHub CLI not authenticated; please run 'gh auth login' or provide GH_TOKEN." -ForegroundColor Yellow
         throw
+    }
+}
+
+function Invoke-GhSafe {
+    param(
+        [Parameter(Mandatory=$true)][string]$CommandLine,
+        [switch]$IgnoreErrors,
+        [int]$RetryCountParam = $RetryCount,
+        [int]$TimeoutSeconds = $GhTimeoutSeconds
+    )
+    $attempt = 0
+    $delay = $InitialRetryDelayMs
+    while ($true) {
+        $attempt++
+        $code = $null
+        $timedOut = $false
+        try {
+            # Use explicit process control for timeout handling
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = 'cmd.exe'
+            $psi.Arguments = "/c $CommandLine"
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $psi.UseShellExecute = $false
+            $psi.CreateNoWindow = $true
+            $proc = [System.Diagnostics.Process]::Start($psi)
+            if ($TimeoutSeconds -gt 0) {
+                if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
+                    $timedOut = $true
+                    try { $proc.Kill() | Out-Null } catch {}
+                }
+            } else {
+                $proc.WaitForExit() | Out-Null
+            }
+            if (-not $timedOut) { $code = $proc.ExitCode } else { $code = -999 }
+        } catch {
+            $code = -998
+        }
+        if ($code -eq 0) { return $true }
+        $transient = $false
+        # Treat non-zero (including timeout sentinel) as transient for retry purposes
+        if ($code -ne 0) { $transient = $true }
+        if ($timedOut) { Write-Host "gh command timed out after ${TimeoutSeconds}s: $CommandLine" -ForegroundColor DarkYellow }
+        if (-not $transient -or $attempt -ge $RetryCountParam) {
+            if (-not $IgnoreErrors) { throw "gh failed (exit $code) after $attempt attempts: $CommandLine" }
+            return $false
+        }
+        Start-Sleep -Milliseconds $delay
+        $delay = [Math]::Min($delay * 2, 8000)
     }
 }
 
@@ -223,7 +281,7 @@ function Set-IssueBody {
     param([int]$number,[string]$Owner,[string]$Repo,[string]$body)
     $tmp = [System.IO.Path]::Combine($env:TEMP, "issue_body_$number.md")
     Set-Content -Path $tmp -Value $body -Encoding UTF8
-    gh issue edit $number --repo "$Owner/$Repo" --body-file "$tmp" 1>$null
+    Invoke-GhSafe -CommandLine "gh issue edit $number --repo $Owner/$Repo --body-file `"$tmp`"" | Out-Null
 }
 
 function Reconcile-Labels {
@@ -239,14 +297,17 @@ function Reconcile-Labels {
         $toRemove = @()
     }
 
-    foreach ($l in $toAdd) {
-        if ($DryRun) { Write-Host "DRYRUN add label '$l' to #$number" -ForegroundColor DarkGray }
-        else { gh issue edit $number --repo "$Owner/$Repo" --add-label "$l" 1>$null }
+    if ($DryRun) {
+        foreach ($l in $toAdd) { Write-Host "DRYRUN add label '$l' to #$number" -ForegroundColor DarkGray }
+        foreach ($l in $toRemove) { Write-Host "DRYRUN remove label '$l' from #$number" -ForegroundColor DarkGray }
+        return
     }
-    foreach ($l in $toRemove) {
-        if ($DryRun) { Write-Host "DRYRUN remove label '$l' from #$number" -ForegroundColor DarkGray }
-        else { gh issue edit $number --repo "$Owner/$Repo" --remove-label "$l" 1>$null }
-    }
+    if ($toAdd.Count -eq 0 -and $toRemove.Count -eq 0) { return }
+    $args = @("issue","edit", "$number", "--repo", "$Owner/$Repo")
+    foreach ($l in $toAdd) { $args += @("--add-label", $l) }
+    foreach ($l in $toRemove) { $args += @("--remove-label", $l) }
+    $escaped = $args | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
+    Invoke-GhSafe -CommandLine ("gh " + ($escaped -join ' ')) | Out-Null
 }
 
 function Write-RunSummary {
@@ -275,6 +336,7 @@ function Write-RunSummary {
             skippedCount = $skipped.Count
             failedCount = $failed.Count
             totalFromMarkdown = $desiredIssues.Count
+            filteredCount = $desiredIssues.Count
             elapsedSeconds = [math]::Round($sw.Elapsed.TotalSeconds,1)
             createdTitles = @($created)
             updatedTitles = @($updated)
@@ -290,32 +352,68 @@ function Write-RunSummary {
 # Main
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 try {
-    Ensure-GhAuth
-    if (-not $Owner -or -not $Repo) {
-        $repo = Resolve-Repo -Owner $Owner -Repo $Repo
-        $Owner = $repo.Owner; $Repo = $repo.Repo
-    }
+    if (-not $ParseOnly) { Ensure-GhAuth }
+    if (-not $ParseOnly) {
+        if (-not $Owner -or -not $Repo) {
+            $repo = Resolve-Repo -Owner $Owner -Repo $Repo
+            $Owner = $repo.Owner; $Repo = $repo.Repo
+        }
         Write-Host "Using repository: $Owner/$Repo" -ForegroundColor DarkCyan
+    } else {
+        # For parse-only mode set placeholder repo for summary clarity
+        if (-not $Owner) { $Owner = 'N/A' }
+        if (-not $Repo) { $Repo = 'N/A' }
+    }
     if (-not (Test-Path -Path $StoriesPath)) { throw "Stories file not found: $StoriesPath" }
     $lines = Get-Content -Path $StoriesPath -Encoding UTF8
 
     Write-Host "Parsing $StoriesPath..." -ForegroundColor Green
     $desiredIssues = Parse-Stories -lines $lines
     Write-Host ("Found {0} items to sync from markdown" -f $desiredIssues.Count) -ForegroundColor Cyan
+    $filteredCount = $desiredIssues.Count
+    if ($FilterTitle) {
+        try { $regex = [regex]::new($FilterTitle, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase) } catch { throw "Invalid -FilterTitle regex: $FilterTitle -> $($_.Exception.Message)" }
+        $desiredIssues = @($desiredIssues | Where-Object { $regex.IsMatch($_.title) })
+        Write-Host ("FilterTitle applied; {0} items remain (pattern: {1})" -f $desiredIssues.Count,$FilterTitle) -ForegroundColor Yellow
+    }
 
-    # Collect all labels to ensure they exist
-    $allLabels = @()
-    foreach ($d in $desiredIssues) { $allLabels += $d.labels }
-    $allLabels = @($allLabels | Where-Object { $_ } | Select-Object -Unique)
-    Ensure-Labels -Owner $Owner -Repo $Repo -labels $allLabels
+    # Apply chunk window if FromIndex/LimitItems specified
+    if ($FromIndex -lt 0) { $FromIndex = 0 }
+    if ($FromIndex -gt 0 -or $LimitItems -gt 0) {
+        $originalTotal = $desiredIssues.Count
+        if ($FromIndex -ge $desiredIssues.Count) {
+            Write-Host "FromIndex $FromIndex beyond list (total $originalTotal). Nothing to do." -ForegroundColor Yellow
+            $desiredIssues = @()
+        } else {
+            if ($LimitItems -gt 0) {
+                $endExclusive = [Math]::Min($FromIndex + $LimitItems, $desiredIssues.Count)
+                $desiredIssues = $desiredIssues[$FromIndex..($endExclusive-1)]
+                Write-Host ("Processing chunk: start={0} size={1} end={2} of total {3}" -f $FromIndex, $desiredIssues.Count, ($FromIndex + $desiredIssues.Count - 1), $originalTotal) -ForegroundColor Magenta
+            } else {
+                $desiredIssues = $desiredIssues[$FromIndex..($desiredIssues.Count-1)]
+                Write-Host ("Processing from index {0} to end (size {1} of total {2})" -f $FromIndex, $desiredIssues.Count, $originalTotal) -ForegroundColor Magenta
+            }
+        }
+    }
 
-    $existingMaps = Get-ExistingIssuesMap -Owner $Owner -Repo $Repo
+    if (-not $ParseOnly) {
+        # Collect all labels to ensure they exist
+        $allLabels = @()
+        foreach ($d in $desiredIssues) { $allLabels += $d.labels }
+        $allLabels = @($allLabels | Where-Object { $_ } | Select-Object -Unique)
+        Ensure-Labels -Owner $Owner -Repo $Repo -labels $allLabels
+
+        $existingMaps = Get-ExistingIssuesMap -Owner $Owner -Repo $Repo
+    } else {
+        $existingMaps = @{ byTitle = @{}; byKey = @{} }
+    }
 
     $created = New-Object System.Collections.Generic.List[string]
     $updated = New-Object System.Collections.Generic.List[string]
     $skipped = New-Object System.Collections.Generic.List[string]
     $failed  = New-Object System.Collections.Generic.List[string]
 
+    $processed = 0
     foreach ($d in $desiredIssues) {
         $matched = $null
         if ($existingMaps.byTitle.ContainsKey($d.title)) {
@@ -326,12 +424,33 @@ try {
         }
 
         try {
-            if ($matched) {
+            if ($ParseOnly) {
+                # In parse only we just record as skipped placeholder
+                $skipped.Add($d.title) | Out-Null
+            } elseif ($matched) {
                 $ex = $matched
                 if ($UpdateExisting) {
                     Write-Host "Updating: $($d.title) (#$($ex.number))" -ForegroundColor Cyan
+                    $skipBody = $false
+                    if ($SkipUnchanged -and -not $DryRun) {
+                        # Fetch existing body only when needed
+                        $detailRaw = gh issue view $ex.number --repo $Owner/$Repo --json body 2>$null
+                        if ($LASTEXITCODE -eq 0 -and $detailRaw) {
+                            try {
+                                $detail = $detailRaw | ConvertFrom-Json
+                                if ($detail -and $detail.body) {
+                                    $existingBody = ($detail.body.Trim())
+                                    $newBody = ($d.body.Trim())
+                                    if ($existingBody -eq $newBody) {
+                                        $skipBody = $true
+                                        Write-Host "Body unchanged; skipping body update for #$($ex.number)" -ForegroundColor DarkGray
+                                    }
+                                }
+                            } catch {}
+                        }
+                    }
                     if (-not $DryRun) {
-                        Set-IssueBody -number $ex.number -Owner $Owner -Repo $Repo -body $d.body
+                        if (-not $skipBody) { Set-IssueBody -number $ex.number -Owner $Owner -Repo $Repo -body $d.body }
                         Reconcile-Labels -number $ex.number -Owner $Owner -Repo $Repo -desired $d.labels -existingIssue $ex
                     }
                     $updated.Add($d.title) | Out-Null
@@ -346,7 +465,9 @@ try {
                     foreach ($l in $d.labels) { $labelArgs += @('--label', $l) }
                     $tmp = [System.IO.Path]::Combine($env:TEMP, "issue_body_create.md")
                     Set-Content -Path $tmp -Value $d.body -Encoding UTF8
-                    gh issue create --repo "$Owner/$Repo" --title "$($d.title)" --body-file "$tmp" @labelArgs 1>$null
+                    $cmd = @('gh','issue','create','--repo',"$Owner/$Repo",'--title',"$($d.title)",'--body-file',"$tmp") + $labelArgs
+                    $escaped = $cmd | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
+                    Invoke-GhSafe -CommandLine ($escaped -join ' ') | Out-Null
                 }
                 $created.Add($d.title) | Out-Null
             }
@@ -359,7 +480,9 @@ try {
             if ($SummaryPath) {
                 Write-RunSummary -Path $SummaryPath -Owner $Owner -Repo $Repo -DryRun:$DryRun -UpdateExisting:$UpdateExisting -ReplaceLabels:$ReplaceLabels -created $created -updated $updated -skipped $skipped -failed $failed -desiredIssues $desiredIssues -sw $sw
             }
+            if ($ThrottleMs -gt 0) { Start-Sleep -Milliseconds $ThrottleMs }
         }
+        $processed++
     }
 
     $sw.Stop()
@@ -375,6 +498,7 @@ try {
         skippedCount = $skipped.Count
         failedCount = $failed.Count
         totalFromMarkdown = $desiredIssues.Count
+        filteredCount = $desiredIssues.Count
         elapsedSeconds = [math]::Round($sw.Elapsed.TotalSeconds,1)
         createdTitles = @($created)
         updatedTitles = @($updated)
@@ -385,7 +509,7 @@ try {
     Write-Host ("Summary written to {0}" -f $SummaryPath) -ForegroundColor Green
 
     # Markdown report
-    if ($MarkdownReportPath) {
+    if ($MarkdownReportPath -and -not $ParseOnly) {
         $md = @()
         $md += "# Issue Sync Report"
         $md += "Repository: $Owner/$Repo"
