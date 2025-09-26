@@ -6,7 +6,7 @@ except ImportError:
 import math
 
 try:
-    from bmp280 import BMP280 as BMP280Driver
+    from drivers.bmp280 import BMP280 as BMP280Driver
 except ImportError:
     BMP280Driver = None
 
@@ -17,18 +17,22 @@ class Bmp280Sensor:
         self._i2c = i2c
         self._driver = None
         self._addr = addr
-        if BMP280Driver is not None:
+        # Only attempt driver usage if the driver module is available AND we have an I2C object
+        if BMP280Driver is not None and self._i2c is not None:
             # Pick address if not specified
             if self._addr is None:
-                found = set(i2c.scan())
+                try:
+                    found = set(self._i2c.scan())
+                except Exception:
+                    found = set()
                 pick = next((a for a in DEFAULT_ADDRS if a in found), None)
                 self._addr = pick if pick is not None else DEFAULT_ADDRS[0]
             # Try common constructor signatures
             try:
-                self._driver = BMP280Driver(i2c, addr=self._addr)
+                self._driver = BMP280Driver(self._i2c, addr=self._addr)
             except TypeError:
                 try:
-                    self._driver = BMP280Driver(i2c)
+                    self._driver = BMP280Driver(self._i2c)
                 except Exception:
                     self._driver = None
 
