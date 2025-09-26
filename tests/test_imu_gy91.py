@@ -1,17 +1,25 @@
-# Test script for IMU (GY-91/MPU9250)
-# This script validates basic sensor communication and data acquisition
-from mpu9250 import read_reg, ACCEL_XOUT_H, GYRO_XOUT_H, TEMP_OUT_H
+"""CPython-friendly IMU wrapper test using simulated path.
 
-# Read accelerometer data
-accel = read_reg(0x68, ACCEL_XOUT_H, 6)
-assert len(accel) == 6, "Accelerometer data length mismatch"
+Exercises sensors.imu_wrapper.ImuSensor which falls back to a simulator in the
+absence of hardware/driver modules.
+"""
 
-# Read gyroscope data
-gyro = read_reg(0x68, GYRO_XOUT_H, 6)
-assert len(gyro) == 6, "Gyroscope data length mismatch"
+from sensors.imu_wrapper import ImuSensor
 
-# Read temperature data
-temp = read_reg(0x68, TEMP_OUT_H, 2)
-assert len(temp) == 2, "Temperature data length mismatch"
 
-print("IMU (GY-91) sensor test passed.")
+def is_tuple3(x):
+	return isinstance(x, (list, tuple)) and len(x) == 3
+
+
+def is_num(x):
+	return isinstance(x, (int, float))
+
+
+def test_imu_wrapper_simulated_read():
+	imu = ImuSensor(i2c=None)
+	out = imu.read()
+	assert set(out.keys()) == {"accel_g", "gyro_dps", "mag_uT", "temp_c"}
+	assert is_tuple3(out["accel_g"]) and all(is_num(v) for v in out["accel_g"]) 
+	assert is_tuple3(out["gyro_dps"]) and all(is_num(v) for v in out["gyro_dps"]) 
+	assert is_tuple3(out["mag_uT"]) and all(is_num(v) for v in out["mag_uT"]) 
+	assert is_num(out["temp_c"]) 

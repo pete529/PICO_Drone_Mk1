@@ -1,0 +1,51 @@
+﻿{
+    "repository":  "pete529/PICO_Drone_Mk1",
+    "dryRun":  false,
+    "updateExisting":  true,
+    "replaceLabels":  true,
+    "useBodyHash":  true,
+    "createdCount":  0,
+    "updatedCount":  27,
+    "skippedCount":  0,
+    "failedCount":  0,
+    "totalFromMarkdown":  71,
+    "elapsedSeconds":  23.2,
+    "createdTitles":  [
+
+                      ],
+    "updatedTitles":  [
+                          "Story 1.1.1: As a developer, I want a Raspberry Pi Pico 2W integrated on the PCB so that I have wireless connectivity and sufficient processing power for flight control",
+                          "Story 1.1.2: As a developer, I want dual DRV8833 motor drivers on the PCB so that I can control 4 brushed DC motors independently",
+                          "Story 1.1.3: As a developer, I want a GY-91 9-DOF IMU integrated so that I can measure orientation, acceleration, and magnetic heading",
+                          "Story 1.1.4: As a developer, I want proper power management with LiPo battery support so that the drone can operate wirelessly",
+                          "Story 1.1.5: As a developer, I want status LEDs and user controls so that I can monitor system state and interact with the drone",
+                          "Story 1.2.1: As a developer, I want automated part selection from LCSC so that I can easily source components for manufacturing",
+                          "Story 1.2.2: As a developer, I want proper footprint assignments so that components can be placed and soldered correctly",
+                          "Story 1.2.3: As a developer, I want a validated BOM with pricing so that I can estimate manufacturing costs",
+                          "Story 1.3.1: As a developer, I want KiCad PCB layout files so that I can visualize and modify the board design",
+                          "Story 1.3.2: As a developer, I want Gerber files for manufacturing so that I can send the design to a PCB fab house",
+                          "Story 1.3.3: As a developer, I want assembly instructions so that I can populate the PCB with components",
+                          "Story 2.1.1: As a flight controller, I want to read accelerometer data so that I can detect tilt and acceleration",
+                          "Story 2.1.2: As a flight controller, I want to read gyroscope data so that I can measure rotational rates",
+                          "Story 2.1.3: As a flight controller, I want to read magnetometer data so that I can determine heading/yaw",
+                          "Story 2.1.4: As a flight controller, I want to read barometric pressure so that I can estimate altitude",
+                          "Story 2.1.5: As a flight controller, I want sensor fusion algorithms so that I can combine all sensor data into accurate state estimates",
+                          "Story 2.2.1: As a flight controller, I want individual motor speed control so that I can adjust thrust for each rotor",
+                          "Story 2.2.2: As a flight controller, I want motor direction control so that I can spin motors clockwise and counter-clockwise",
+                          "Story 2.2.3: As a flight controller, I want emergency motor shutoff so that I can stop all motors in case of problems",
+                          "Story 2.2.4: As a flight controller, I want motor speed limiting so that I don\u0027t damage motors or draw excessive current",
+                          "Story 2.3.1: As a flight controller, I want PID control loops so that I can automatically correct for tilt and rotation",
+                          "Story 2.3.2: As a flight controller, I want attitude hold mode so that the drone maintains level flight without input",
+                          "Story 2.3.3: As a flight controller, I want rate limiting so that the drone doesn\u0027t make sudden dangerous movements",
+                          "Story 2.3.4: As a flight controller, I want fail-safe behavior so that the drone lands safely if control is lost",
+                          "Story 3.1.1: As an operator, I want the drone to create a WiFi access point so that I can connect directly to it",
+                          "Story 3.1.2: As an operator, I want the drone to connect to my existing WiFi so that I can control it over my network",
+                          "Story 3.1.3: As an operator, I want real-time telemetry data so that I can monitor flight status and sensor readings"
+                      ],
+    "skippedTitles":  [
+
+                      ],
+    "failedTitles":  [
+
+                     ]
+}

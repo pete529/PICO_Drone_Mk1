@@ -1,17 +1,19 @@
-from machine import Pin, I2C
-import utime
-import bmp280
+"""CPython-friendly BMP280 wrapper test (no hardware required).
 
-i2c = I2C(0, scl=Pin(5), sda=Pin(4), freq=100000)
-sensor = bmp280.BMP280(i2c)
+Uses sensors.bmp280_wrapper which falls back to a simulator when drivers are
+unavailable. This allows basic sanity checks on a desktop.
+"""
 
-while True:
-    temp = sensor.temperature   # °C
-    press = sensor.pressure     # Pa
-    alt = 44330 * (1 - (press/101325) ** (1/5.255))  # meters
+from sensors.bmp280_wrapper import Bmp280Sensor
 
-    print("Temp: {:.2f} °C".format(temp))
-    print("Pressure: {:.2f} Pa".format(press))
-    print("Altitude: {:.2f} m".format(alt))
-    print("----")
-    utime.sleep(2)
+
+def is_num(x):
+    return isinstance(x, (int, float))
+
+
+def test_bmp280_wrapper_simulated_read():
+    # Pass i2c=None to force wrapper to avoid driver path in CPython
+    s = Bmp280Sensor(i2c=None)
+    out = s.read()
+    assert set(out.keys()) == {"temperature_c", "pressure_pa", "altitude_m"}
+    assert is_num(out["temperature_c"]) and is_num(out["pressure_pa"]) and is_num(out["altitude_m"]) 
