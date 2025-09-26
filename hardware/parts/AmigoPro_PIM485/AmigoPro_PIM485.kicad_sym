@@ -5,6 +5,6 @@
     (property "Supplier" "Pimoroni" (id 2) (at 0 -3) (effects (font (size 1.27 1.27))))
     (property "Supplier Part" "PIM485" (id 3) (at 0 -4.5) (effects (font (size 1.27 1.27))))
     (property "Supplier Link" "https://shop.pimoroni.com/products/lipo-amigo-pro" (id 4) (at 0 -6) (effects (font (size 1.27 1.27))))
-    (property "Mechanical Drawing" "https://cdn.shopify.com/s/files/1/0174/1800/files/lipo_amigo_pro_drawing.png?v=1657728492" (id 5) (at 0 -7.5) (effects (font (size 1.27 1.27))))
+    (property "Mechanical Drawing" "https://cdn.shopify.com/s/files/1/0174/1800/files/lipo_amigo_drawing.png?v=1657728529" (id 5) (at 0 -7.5) (effects (font (size 1.27 1.27))))
   )
 )
