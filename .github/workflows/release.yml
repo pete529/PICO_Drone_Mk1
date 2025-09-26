@@ -37,12 +37,35 @@ jobs:
           echo "-- hardware/build/builds/default --"
           ls -la hardware/build/builds/default || true
 
-      - name: Prepare artifact bundle
-        run: |
-          mkdir dist
-          cp -r hardware/build/builds/default dist/builds
-          echo "Version: ${GITHUB_REF#refs/tags/}" > dist/RELEASE_INFO.txt
+      - name: Diagnostics - list potential build outputs
         shell: bash
+        run: |
+          set -euo pipefail
+          echo "Workspace: $(pwd)"
+          echo "::group::hardware/build/builds"
+          ls -la hardware/build/builds || true
+          echo "::endgroup::"
+          echo "::group::build/builds"
+          ls -la build/builds || true
+          echo "::endgroup::"
+          echo "::group::Find BOM files"
+          find . -maxdepth 4 -type f -name "default.bom.csv" -print || true
+          echo "::endgroup::"
+
+      - name: Prepare artifact bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          if [ -d hardware/build/builds/default ]; then
+            cp -r hardware/build/builds/default dist/builds
+          elif [ -d build/builds/default ]; then
+            cp -r build/builds/default dist/builds
+          else
+            echo "No build outputs found in hardware/build/builds/default or build/builds/default" >&2
+            exit 1
+          fi
+          echo "Version: ${GITHUB_REF#refs/tags/}" > dist/RELEASE_INFO.txt
 
       - name: Archive bundle
         uses: actions/upload-artifact@v4

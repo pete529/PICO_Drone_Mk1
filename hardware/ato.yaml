@@ -3,6 +3,7 @@ requires-atopile: "0.12.4"
 paths:
   src: ./
   layout: ./layouts
+  modules: ./modules
 
 builds:
   default:
