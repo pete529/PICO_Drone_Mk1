@@ -9,9 +9,17 @@ ato --version
 ```
 If missing, install (choose one):
 ```
-pip install --upgrade atopile
-# or
+# Windows PowerShell (uses the Python Launcher)
+py -m pip install --upgrade atopile
+# or, with pipx (recommended if you use multiple Python versions)
 pipx install atopile
+```
+
+Run from the repo root so the root `ato.yaml` is picked up:
+```
+cd ..  # from hardware/ to repo root
+ato --version
+ato view  # opens the default build (App) in your browser
 ```
 
 ### 2. Use Library Passives

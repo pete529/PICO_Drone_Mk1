@@ -1,0 +1,13 @@
+#pragma experiment("TRAITS")
+
+import is_atomic_part
+import has_designator_prefix
+import has_part_picked
+from "atopile/components/gy91.ato" import Gy91
+
+component GY_91_Module from Gy91:
+    """GY-91 breakout module (MPU-9250 + BMP280), treated as a single purchasable module."""
+
+    trait is_atomic_part<manufacturer="Generic", partnumber="GY-91", footprint="GY-91.kicad_mod", symbol="GY-91.kicad_sym">
+    trait has_designator_prefix<prefix="U">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C2905167", manufacturer="Generic", partno="GY-91">

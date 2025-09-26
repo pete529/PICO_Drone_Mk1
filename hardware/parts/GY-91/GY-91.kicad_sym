@@ -1,0 +1,6 @@
+(kicad_symbol_lib (version 20211014) (generator ato)
+  (symbol "GY-91" (in_bom yes) (on_board yes)
+    (property "Reference" "U" (id 0) (at 0 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "GY-91" (id 1) (at 0 -1.5) (effects (font (size 1.27 1.27))))
+  )
+)

@@ -1,0 +1,13 @@
+#pragma experiment("TRAITS")
+
+import is_atomic_part
+import has_designator_prefix
+import has_part_picked
+from "atopile/components/headers.ato" import Header2P
+
+component Connector_2Pin_JST_PH from Header2P:
+    """2-pin motor connector: JST-PH 2.0mm vertical (example)."""
+
+    trait is_atomic_part<manufacturer="Generic", partnumber="JST-PH_1x2", footprint="JST_PH_B2B-PH-SM4-TB.kicad_mod", symbol="JST_PH_1x2.kicad_sym">
+    trait has_designator_prefix<prefix="J">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C145961", manufacturer="JST", partno="B2B-PH-SM4-TB">

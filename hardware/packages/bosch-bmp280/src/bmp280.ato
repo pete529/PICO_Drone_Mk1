@@ -1,0 +1,7 @@
+component BMP280:
+    # Bosch BMP280 Barometer/Temperature Sensor (I2C)
+    # Simplified abstract with package binding via this package
+    pin SDA
+    pin SCL
+    pin VCC
+    pin GND

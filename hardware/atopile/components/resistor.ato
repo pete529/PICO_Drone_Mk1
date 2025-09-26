@@ -2,3 +2,10 @@ component Resistor0603:
     # SMD 0603 resistor (abstract - footprint to be resolved later)
     pin 1
     pin 2
+
+component Resistor:
+    # Parameterized resistor intended for picking
+    resistance: ohm
+    package: dimensionless = "0603"
+    pin 1
+    pin 2

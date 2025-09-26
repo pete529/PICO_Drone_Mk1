@@ -1,0 +1,15 @@
+#pragma experiment("TRAITS")
+
+import is_atomic_part
+import has_designator_prefix
+import has_part_picked
+from "atopile/components/pico2w.ato" import Pico2W
+
+component Raspberry_Pi_Pico_2W from Pico2W:
+    """Raspberry Pi Pico 2 W module (castellated).
+    Exposes the same interface as Pico2W but treated as an atomic purchasable module for BOM.
+    """
+
+    trait is_atomic_part<manufacturer="Raspberry Pi", partnumber="Pico 2 W", footprint="Raspberry_Pi_Pico_2W.kicad_mod", symbol="Raspberry_Pi_Pico_2W.kicad_sym">
+    trait has_designator_prefix<prefix="U">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C2985970", manufacturer="Raspberry Pi", partno="Pico 2 W">

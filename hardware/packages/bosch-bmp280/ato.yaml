@@ -1,0 +1,16 @@
+requires-atopile: "0.12.4"
+
+paths:
+  src: ./src
+
+builds:
+  default:
+    entry: bmp280.ato:BMP280
+
+package:
+  identifier: bosch-bmp280
+  version: "0.1.0"
+  summary: Local BMP280 package for picking
+  license: MIT
+  authors:
+    - name: Local

@@ -57,17 +57,18 @@ This project is a complete Raspberry Pi Pico 2W based quadcopter flight controll
 Requirements: Python 3.11+, Atopile 0.12.4
 
 ```powershell
-# Install atopile
-pip install atopile==0.12.4
+# Install atopile (Windows-friendly)
+py -m pip install --upgrade atopile==0.12.4
 
-# Navigate to hardware directory  
-cd hardware
+# From repo root, verify and open the design viewer
+ato --version
+ato view                    # opens default build (App)
 
 # Build the project (generates KiCad files, BOM, netlist)
 ato build
 
-# Build specific target
-ato build --target test_pickable
+# Build a specific target (pickable resistor demo)
+ato build --build test_pickable
 ```
 
 **Build Output:**
