@@ -36,24 +36,34 @@ jobs:
           ls -la
           echo "-- hardware/build --"
           ls -la hardware/build || true
+          echo "-- hardware/build/builds --"
+          ls -la hardware/build/builds || true
           echo "-- hardware/build/builds/default --"
           ls -la hardware/build/builds/default || true
+          echo "-- build/builds --"
+          ls -la build/builds || true
+          echo "-- build/builds/default --"
+          ls -la build/builds/default || true
+          echo "-- find candidate files --"
+          find . -maxdepth 5 -type f \( -name "*.kicad_pcb" -o -name "default.bom.csv" -o -name "*.variables.md" -o -name "*.i2c_tree.md" \) -print || true
 
       - name: Fail if BOM empty
         shell: bash
         run: |
-          BOM_A="hardware/build/builds/default/default.bom.csv"
-          BOM_B="build/builds/default/default.bom.csv"
-          if [ -s "$BOM_A" ]; then
-            BOM="$BOM_A"
-          elif [ -s "$BOM_B" ]; then
-            BOM="$BOM_B"
-          else
-            echo "BOM file missing or empty at both paths:\n  $BOM_A\n  $BOM_B" >&2
+          set -euo pipefail
+          # Search for a non-empty default.bom.csv under common output roots
+          BOM=$(find hardware/build build -type f -name "default.bom.csv" -print 2>/dev/null | head -n 1 || true)
+          if [ -z "${BOM:-}" ]; then
+            echo "No default.bom.csv found under hardware/build or build" >&2
+            echo "Tree preview:" >&2
+            find hardware/build build -maxdepth 3 -type d -print 2>/dev/null || true
+            exit 1
+          fi
+          if [ ! -s "$BOM" ]; then
+            echo "BOM file exists but is empty: $BOM" >&2
             exit 1
           fi
           echo "Using BOM: $BOM"
-          # Count non-empty, non-comment lines (in case header appears)
           COUNT=$(grep -v '^#' "$BOM" | sed '/^$/d' | wc -l || true)
           if [ "$COUNT" -le 1 ]; then
             echo "BOM appears to have no component rows (lines: $COUNT)" >&2
@@ -61,21 +71,37 @@ jobs:
           fi
           echo "BOM check passed with $COUNT lines"
 
+      - name: Collect artifacts into dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist || true
+          mkdir -p dist/builds/default
+          ROOT=""
+          if [ -d hardware/build/builds/default ]; then
+            ROOT=hardware/build/builds/default
+          fi
+          if [ -z "$ROOT" ] && [ -d build/builds/default ]; then
+            ROOT=build/builds/default
+          fi
+          if [ -z "$ROOT" ]; then
+            echo "No default build output dirs found under hardware/build/builds or build/builds" >&2
+            find hardware/build build -maxdepth 3 -type d -print 2>/dev/null || true
+            exit 1
+          fi
+          echo "Using output root: $ROOT"
+          cp -r "$ROOT"/* dist/builds/default/ 2>/dev/null || true
+          echo "Collected files in dist/builds/default:" 
+          ls -la dist/builds/default || true
+
       - name: Upload build artifacts (KiCad + reports)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pcb-build-artifacts
           path: |
-            hardware/build/builds/default/*.kicad_pcb
-            hardware/build/builds/default/*.bom.csv
-            hardware/build/builds/default/*.variables.md
-            hardware/build/builds/default/*.i2c_tree.md
-            build/builds/default/*.kicad_pcb
-            build/builds/default/*.bom.csv
-            build/builds/default/*.variables.md
-            build/builds/default/*.i2c_tree.md
-          if-no-files-found: warn
+            dist/builds/default
+          if-no-files-found: error
 
       - name: Upload 3D / GLB (if present)
         if: always()
@@ -83,8 +109,7 @@ jobs:
         with:
           name: pcb-3d
           path: |
-            hardware/build/builds/default/*.pcba.glb
-            build/builds/default/*.pcba.glb
+            dist/builds/default/*.pcba.glb
           if-no-files-found: ignore
 
       - name: Upload build logs (always)
