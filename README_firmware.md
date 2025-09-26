@@ -39,6 +39,31 @@ The wrappers will try drivers packages first (e.g., `drivers.mpu9250`, `drivers.
 - If no sensor drivers are found, simulated readings are produced so the loop runs.
 - Tune the PID gains in `flight_computer.py`.
 
+## Arming button (GP13)
+
+- The flight computer watches a momentary push-button on GP13 (`BUTTON_ARM_PIN` in `config/pins.py`).
+- The input is configured with pull-up; a press pulls the line low (active-low).
+- Debounce: 80 ms; a valid press toggles armed/disarmed. While armed, motors respond to throttle/mixer; when disarmed, outputs are forced to zero.
+
+## Attitude filter (Complementary)
+
+- `control/attitude.py` provides a simple complementary filter that fuses accelerometer (for roll/pitch long-term) and gyroscope (short-term dynamics). Yaw integrates gyro Z rate.
+- Tuning: `alpha` (default 0.98). Higher alpha trusts gyro more (faster response, more drift), lower alpha trusts accel more (slower, less drift).
+
+## Magnetometer support
+
+- The `drivers/mpu9250.py` driver enables AK8963 magnetometer via I2C bypass and applies factory sensitivity adjustment.
+- Sensor outputs are exposed in microtesla (uT) via `ImuSensor` wrapper at `out['mag_uT']`.
+- Note: Hard/soft iron calibration is not implemented; heading accuracy may be limited without calibration.
+
+## Running tests on desktop (no hardware)
+
+- Tests under `tests/` are CPython-friendly and exercise simulation paths (no `machine` module required).
+- Examples:
+  - `test_bmp280.py` uses the BMP280 wrapper and checks numeric outputs.
+  - `test_imu_gy91.py` validates accel/gyro/mag/temp fields from the IMU wrapper.
+  - `test_sensor_hub.py` checks combined outputs from the `SensorHub`.
+
 ## Motor control (DRV8833 x2)
 
 - Pins (from `hardware/main.ato`):
