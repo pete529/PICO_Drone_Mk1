@@ -19,6 +19,7 @@ from "atopile/components/resistor.ato" import Resistor
 from "atopile/bosch-bmp280/bosch-bmp280.ato" import Bosch_BMP280
 from "atopile/indicator-leds/indicator-leds.ato" import LEDIndicatorRed, LEDIndicatorGreen
 from "atopile/buttons/buttons.ato" import HorizontalButton
+from "parts/Aideepen_GPS_Module/Aideepen_GPS_Module.ato" import Aideepen_GPS_Module
 
 module App:
     """Main quadcopter flight controller board"""
@@ -44,23 +45,29 @@ module App:
     signal PICO_GP5    # DRV8833_R AIN2 (Right motor 1 direction B)
     signal PICO_GP6    # DRV8833_R BIN1 (Right motor 2 direction A)
     signal PICO_GP7    # DRV8833_R BIN2 (Right motor 2 direction B)
+    signal PICO_GP8    # Reassigned: DRV8833_L AIN1
+    signal PICO_GP9    # Reassigned: DRV8833_L AIN2
     
-    # Motor driver enable/sleep signals
-    signal PICO_GP8    # DRV8833_L SLEEP (Left driver enable)
-    signal PICO_GP9    # DRV8833_R SLEEP (Right driver enable)
+    # Motor driver enable/sleep signals (remapped to free GP0/GP1 for UART)
+    signal PICO_GP15   # DRV8833_L SLEEP (Left driver enable)
+    signal PICO_GP17   # DRV8833_R SLEEP (Right driver enable)
     
     # I2C bus for sensors
     signal PICO_GP26_SDA  # I2C SDA (to ICM-20946 and BMP280)
     signal PICO_GP27_SCL  # I2C SCL (to ICM-20946 and BMP280)
+
+    # UART0 for GPS
+    signal PICO_GP0_TX    # UART0 TX (to GPS RX)
+    signal PICO_GP1_RX    # UART0 RX (from GPS TX)
     
     # Status LEDs and button
     signal PICO_GP13   # Power button input (with pull-up)
     signal PICO_GP14   # Red LED control (activity indicator)
-    signal PICO_GP15   # Green LED control (power indicator)
+    # Note: GP15 repurposed for DRV8833_L SLEEP to free UART0 pins
     
     # Sensor interrupt/status signals
     signal PICO_GP16   # IMU interrupt pin
-    signal PICO_GP17   # Spare GPIO
+    # PICO_GP17 used for DRV8833_R SLEEP
     signal PICO_GP18   # Spare GPIO
     
     # ===========================================
@@ -168,6 +175,7 @@ module App:
     led_red_ind = new LEDIndicatorRed  # Red status LED (GPIO controlled)
     led_green_ind = new LEDIndicatorGreen  # Green status LED (always on)
     btn = new HorizontalButton         # Power button (momentary)
+    gps = new Aideepen_GPS_Module      # GPS module (UART0)
     motor_l1_conn = new Connector_2Pin_JST_PH  # Motor Left 1 connector (pickable)
     motor_l2_conn = new Connector_2Pin_JST_PH  # Motor Left 2 connector (pickable)
     motor_r1_conn = new Connector_2Pin_JST_PH  # Motor Right 1 connector (pickable)
@@ -197,9 +205,9 @@ module App:
     power_3v3 ~ baro.power_core
     power_3v3 ~ baro.power_io
     
-    # Connect motor control signals
-    PICO_GP0 ~ DRV8833_L_AIN1
-    PICO_GP1 ~ DRV8833_L_AIN2
+    # Connect motor control signals (remapped to free GP0/GP1 for UART)
+    PICO_GP8 ~ DRV8833_L_AIN1
+    PICO_GP9 ~ DRV8833_L_AIN2
     PICO_GP2 ~ DRV8833_L_BIN1
     PICO_GP3 ~ DRV8833_L_BIN2
     PICO_GP4 ~ DRV8833_R_AIN1
@@ -207,9 +215,9 @@ module App:
     PICO_GP6 ~ DRV8833_R_BIN1
     PICO_GP7 ~ DRV8833_R_BIN2
     
-    # Connect enable signals
-    PICO_GP8 ~ DRV8833_L_SLEEP
-    PICO_GP9 ~ DRV8833_R_SLEEP
+    # Connect enable signals (remapped)
+    PICO_GP15 ~ DRV8833_L_SLEEP
+    PICO_GP17 ~ DRV8833_R_SLEEP
     
     # LED circuits: Red (GPIO controlled) and Green (power indicator always on)
     # Red LED: bridge between GPIO and ground via the indicator LED module
@@ -227,16 +235,23 @@ module App:
     PICO_GP16 ~ ICM20946_INT
     
     # Instance-level motor driver wiring (control signals)
-    pico.GP0 ~ drv_left.AIN1
-    pico.GP1 ~ drv_left.AIN2
+    pico.GP8 ~ drv_left.AIN1
+    pico.GP9 ~ drv_left.AIN2
     pico.GP2 ~ drv_left.BIN1
     pico.GP3 ~ drv_left.BIN2
     pico.GP4 ~ drv_right.AIN1
     pico.GP5 ~ drv_right.AIN2
     pico.GP6 ~ drv_right.BIN1
     pico.GP7 ~ drv_right.BIN2
-    pico.GP8 ~ drv_left.SLEEP
-    pico.GP9 ~ drv_right.SLEEP
+    pico.GP15 ~ drv_left.SLEEP
+    pico.GP17 ~ drv_right.SLEEP
+
+    # GPS UART wiring (UART0): MCU TX->GPS RX, MCU RX<-GPS TX
+    pico.GP0 ~ gps.RX
+    pico.GP1 ~ gps.TX
+    # GPS power
+    gps.VCC ~ VCC_3V3
+    gps.GND ~ GND
 
     # Motor driver outputs direct to motor connectors
     drv_left.AOUT1 ~ motor_l1_conn.1

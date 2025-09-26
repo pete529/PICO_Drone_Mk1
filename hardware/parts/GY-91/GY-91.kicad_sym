@@ -2,5 +2,7 @@
   (symbol "GY-91" (in_bom yes) (on_board yes)
     (property "Reference" "U" (id 0) (at 0 0) (effects (font (size 1.27 1.27))))
     (property "Value" "GY-91" (id 1) (at 0 -1.5) (effects (font (size 1.27 1.27))))
+    (property "Supplier" "The Pi Hut" (id 2) (at 0 -3) (effects (font (size 1.27 1.27))))
+    (property "Supplier Link" "https://thepihut.com/products/adafruit-tdk-invensense-icm-20948-9-dof-imu-mpu-9250-upgrade?variant=32342174761022" (id 3) (at 0 -4.5) (effects (font (size 1.27 1.27))))
   )
 )
