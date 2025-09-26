@@ -29,6 +29,16 @@ jobs:
         run: |
           ato build --no-color
 
+      - name: List build outputs (diagnostic)
+        if: always()
+        run: |
+          echo "Workspace: $GITHUB_WORKSPACE"
+          ls -la
+          echo "-- hardware/build --"
+          ls -la hardware/build || true
+          echo "-- hardware/build/builds/default --"
+          ls -la hardware/build/builds/default || true
+
       - name: Fail if BOM empty
         shell: bash
         run: |
@@ -55,6 +65,7 @@ jobs:
             hardware/build/builds/default/*.bom.csv
             hardware/build/builds/default/*.variables.md
             hardware/build/builds/default/*.i2c_tree.md
+          if-no-files-found: warn
 
       - name: Upload 3D / GLB (if present)
         if: always()
@@ -64,3 +75,12 @@ jobs:
           path: |
             hardware/build/builds/default/*.pcba.glb
           if-no-files-found: ignore
+
+      - name: Upload build logs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pcb-build-logs
+          path: |
+            hardware/build/logs/**
+          if-no-files-found: warn

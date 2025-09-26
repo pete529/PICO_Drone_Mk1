@@ -26,16 +26,23 @@ jobs:
           pip install atopile==0.12.4
 
       - name: Build PCB
-        working-directory: "PCB Design/quadcopter_pcb"
+        working-directory: hardware
         run: |
           ato build --no-color
+
+      - name: List build outputs (diagnostic)
+        run: |
+          echo "-- hardware/build --"
+          ls -la hardware/build || true
+          echo "-- hardware/build/builds/default --"
+          ls -la hardware/build/builds/default || true
 
       - name: Prepare artifact bundle
         run: |
           mkdir dist
-          copy "PCB Design/quadcopter_pcb/build/builds/default" dist/builds -Recurse
+          cp -r hardware/build/builds/default dist/builds
           echo "Version: ${GITHUB_REF#refs/tags/}" > dist/RELEASE_INFO.txt
-        shell: pwsh
+        shell: bash
 
       - name: Archive bundle
         uses: actions/upload-artifact@v4
