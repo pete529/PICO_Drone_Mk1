@@ -50,6 +50,13 @@
         (descr "atopile: part lib: TI_DRV8833")
     )
     (lib
+        (name "UBlox_NEO6M")
+        (type "KiCad")
+        (uri "${KIPRJMOD}\\..\\..\\parts\\UBlox_NEO6M")
+        (options "")
+        (descr "atopile: part lib: UBlox_NEO6M")
+    )
+    (lib
         (name "UNI_ROYAL_0402WGF1001TCE")
         (type "KiCad")
         (uri "${KIPRJMOD}\\..\\..\\parts\\UNI_ROYAL_0402WGF1001TCE")

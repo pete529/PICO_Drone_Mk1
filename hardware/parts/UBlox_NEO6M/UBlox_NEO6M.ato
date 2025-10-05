@@ -1,0 +1,19 @@
+#pragma experiment("TRAITS")
+
+import is_atomic_part
+import has_designator_prefix
+
+component UBlox_NEO6M:
+    """u-blox NEO-6M GPS Module (UART).
+    Reuses existing KiCad assets for continuity.
+    Reference: https://www.u-blox.com/en/product/neo-6-series
+    """
+
+    pin VCC
+    pin GND
+    pin TX
+    pin RX
+
+    # Use UBlox_NEO6M KiCad assets
+    trait is_atomic_part<manufacturer="u-blox", partnumber="NEO-6M", footprint="UBlox_NEO6M.kicad_mod", symbol="UBlox_NEO6M.kicad_sym">
+    trait has_designator_prefix<prefix="U">

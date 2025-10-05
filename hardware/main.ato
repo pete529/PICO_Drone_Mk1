@@ -17,7 +17,7 @@ from "parts/Connector_2Pin_JST_PH/Connector_2Pin_JST_PH.ato" import Connector_2P
 from "atopile/bosch-bmp280/bosch-bmp280.ato" import Bosch_BMP280
 from "atopile/indicator-leds/indicator-leds.ato" import LEDIndicatorRed, LEDIndicatorGreen
 from "atopile/buttons/buttons.ato" import HorizontalButton
-from "parts/Aideepen_GPS_Module/Aideepen_GPS_Module.ato" import UBlox_NEO6M_Module
+from "parts/UBlox_NEO6M/UBlox_NEO6M.ato" import UBlox_NEO6M
 
 module App:
     """Main quadcopter flight controller board"""
@@ -173,7 +173,7 @@ module App:
     led_red_ind = new LEDIndicatorRed  # Red status LED (GPIO controlled)
     led_green_ind = new LEDIndicatorGreen  # Green status LED (always on)
     btn = new HorizontalButton         # Power button (momentary)
-    gps = new UBlox_NEO6M_Module      # GPS module (UART0)
+    gps = new UBlox_NEO6M      # GPS module (UART0)
     motor_l1_conn = new Connector_2Pin_JST_PH  # Motor Left 1 connector (pickable)
     motor_l2_conn = new Connector_2Pin_JST_PH  # Motor Left 2 connector (pickable)
     motor_r1_conn = new Connector_2Pin_JST_PH  # Motor Right 1 connector (pickable)
