@@ -5,11 +5,14 @@ except ImportError:
 
 import math
 
-# Try ICM-20948 first (dynamic import)
+# Try ICM-20948 first (prefer local drivers.icm20948)
 try:
-    icm20948_mod = __import__('icm20948')
+    from drivers import icm20948 as icm20948_mod
 except Exception:
-    icm20948_mod = None
+    try:
+        icm20948_mod = __import__('icm20948')
+    except Exception:
+        icm20948_mod = None
 
 # Then fall back to MPU9250 (prefer drivers package, then plain module)
 try:
