@@ -4,10 +4,11 @@ import is_atomic_part
 import has_designator_prefix
 from "atopile/components/headers.ato" import Header4P
 
-component Aideepen_GPS_Module:
-    """Aideepen GPS Module with external patch antenna.
+component UBlox_NEO6M_Module:
+    """u-blox NEO-6M GPS module with external patch antenna.
     Approx dimensions: 36 x 26 x 4 mm (module), antenna 27 x 27 x 6.5 mm, cable ~45 mm.
     Exposes a 1x4 header interface: VCC, GND, TX, RX (typical UART GPS).
+    Reference: https://www.u-blox.com/en/product/neo-6-series
     """
 
     pin VCC
@@ -15,7 +16,7 @@ component Aideepen_GPS_Module:
     pin TX
     pin RX
 
-    trait is_atomic_part<manufacturer="Aideepen", partnumber="GPS_Module_UART", footprint="Aideepen_GPS_Module.kicad_mod", symbol="Aideepen_GPS_Module.kicad_sym">
+    trait is_atomic_part<manufacturer="u-blox", partnumber="NEO-6M", footprint="Aideepen_GPS_Module.kicad_mod", symbol="Aideepen_GPS_Module.kicad_sym">
     trait has_designator_prefix<prefix="U">
     # Supplier link: Amazon ASIN B08CZSL193
     # Picker currently supports limited suppliers (e.g., lcsc). If you want BOM auto-pick, provide a supported supplier + SKU.

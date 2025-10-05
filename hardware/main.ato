@@ -14,12 +14,10 @@ from "parts/TI_DRV8833/TI_DRV8833.ato" import TI_DRV8833
 from "parts/GY-91/GY-91.ato" import GY_91_Module
 from "parts/AmigoPro_PIM485/AmigoPro_PIM485.ato" import AmigoPro_PIM485
 from "parts/Connector_2Pin_JST_PH/Connector_2Pin_JST_PH.ato" import Connector_2Pin_JST_PH
-from "lib/r_test.ato" import RTest
-from "atopile/components/resistor.ato" import Resistor
 from "atopile/bosch-bmp280/bosch-bmp280.ato" import Bosch_BMP280
 from "atopile/indicator-leds/indicator-leds.ato" import LEDIndicatorRed, LEDIndicatorGreen
 from "atopile/buttons/buttons.ato" import HorizontalButton
-from "parts/Aideepen_GPS_Module/Aideepen_GPS_Module.ato" import Aideepen_GPS_Module
+from "parts/Aideepen_GPS_Module/Aideepen_GPS_Module.ato" import UBlox_NEO6M_Module
 
 module App:
     """Main quadcopter flight controller board"""
@@ -175,19 +173,14 @@ module App:
     led_red_ind = new LEDIndicatorRed  # Red status LED (GPIO controlled)
     led_green_ind = new LEDIndicatorGreen  # Green status LED (always on)
     btn = new HorizontalButton         # Power button (momentary)
-    gps = new Aideepen_GPS_Module      # GPS module (UART0)
+    gps = new UBlox_NEO6M_Module      # GPS module (UART0)
     motor_l1_conn = new Connector_2Pin_JST_PH  # Motor Left 1 connector (pickable)
     motor_l2_conn = new Connector_2Pin_JST_PH  # Motor Left 2 connector (pickable)
     motor_r1_conn = new Connector_2Pin_JST_PH  # Motor Right 1 connector (pickable)
     motor_r2_conn = new Connector_2Pin_JST_PH  # Motor Right 2 connector (pickable)
     # Passive components
-
     # Green LED uses official package with internal resistor; no extra resistor needed
-
-    r_button_pullup = new Resistor
-    r_button_pullup.resistance = 10kohm +/- 5%
-    r_button_pullup.package = "0603"
-    r_experiment = new RTest           # Experimental test part for picker
+    # Note: External pull-up resistor removed; we'll rely on Pico's internal pull-up or firmware configuration.
 
     # Connect I2C bus
     ICM20946_SDA ~ PICO_GP26_SDA
@@ -226,9 +219,8 @@ module App:
     # Green LED: direct ElectricPower connection using official package
     power_3v3 ~ led_green_ind.power
     
-    # Button: pull-up to 3.3V and press to ground using official button package
-    power_3v3.vcc ~ r_button_pullup.1
-    r_button_pullup.2 ~ pico.GP13
+    # Button: connect GPIO to button and logic ground via official button package
+    # External pull-up omitted; configure internal pull-up in firmware
     pico.GP13 ~> btn ~> power_3v3.lv
     
     # Connect sensor interrupt
