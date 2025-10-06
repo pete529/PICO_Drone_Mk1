@@ -2,6 +2,7 @@
 
 import is_atomic_part
 import has_designator_prefix
+import has_part_picked
 
 component UBlox_NEO6M:
     """u-blox NEO-6M GPS Module (UART).
@@ -17,3 +18,4 @@ component UBlox_NEO6M:
     # Use UBlox_NEO6M KiCad assets
     trait is_atomic_part<manufacturer="u-blox", partnumber="NEO-6M", footprint="UBlox_NEO6M.kicad_mod", symbol="UBlox_NEO6M.kicad_sym">
     trait has_designator_prefix<prefix="U">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C211852", manufacturer="u-blox", partno="NEO-6M">

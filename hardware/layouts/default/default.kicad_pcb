@@ -5505,6 +5505,42 @@
                 )
             )
         )
+        (property "LCSC" "C000000"
+            (at 0 0 0)
+            (layer "User.9")
+            (hide yes)
+            (uuid "daede3bb-f666-4b03-b0d9-7ec14642524b")
+            (effects
+                (font
+                    (size 0.125 0.125)
+                    (thickness 0.01875)
+                )
+            )
+        )
+        (property "Manufacturer" "Pimoroni"
+            (at 0 0 0)
+            (layer "User.9")
+            (hide yes)
+            (uuid "56e9505f-9282-4217-aed7-e70e4642524b")
+            (effects
+                (font
+                    (size 0.125 0.125)
+                    (thickness 0.01875)
+                )
+            )
+        )
+        (property "Partnumber" "PIM485"
+            (at 0 0 0)
+            (layer "User.9")
+            (hide yes)
+            (uuid "6932a838-55c4-4827-93eb-98354642524b")
+            (effects
+                (font
+                    (size 0.125 0.125)
+                    (thickness 0.01875)
+                )
+            )
+        )
         (attr smd)
         (fp_line
             (start -17.5 -11.5)
@@ -5715,6 +5751,42 @@
             (layer "User.9")
             (hide yes)
             (uuid "53884c21-c0d2-4546-a4b5-0e034642524b")
+            (effects
+                (font
+                    (size 0.125 0.125)
+                    (thickness 0.01875)
+                )
+            )
+        )
+        (property "LCSC" "C211852"
+            (at 0 0 0)
+            (layer "User.9")
+            (hide yes)
+            (uuid "6f63b5d5-6cd1-4282-96d4-f2d24642524b")
+            (effects
+                (font
+                    (size 0.125 0.125)
+                    (thickness 0.01875)
+                )
+            )
+        )
+        (property "Manufacturer" "u-blox"
+            (at 0 0 0)
+            (layer "User.9")
+            (hide yes)
+            (uuid "5bf29c12-ef3a-43bc-945a-8e1d4642524b")
+            (effects
+                (font
+                    (size 0.125 0.125)
+                    (thickness 0.01875)
+                )
+            )
+        )
+        (property "Partnumber" "NEO-6M"
+            (at 0 0 0)
+            (layer "User.9")
+            (hide yes)
+            (uuid "9028c1ce-518b-4d99-bcc6-cb9c4642524b")
             (effects
                 (font
                     (size 0.125 0.125)
@@ -6086,7 +6158,7 @@
     )
     (group "baro"
         (uuid "0eba145c-6130-4ee0-8dbf-9f596261726f")
-        (members "5c3b5dea-f249-4d49-95a4-2c1e9015d18f" "b1800b6c-6247-4d83-af5c-c46347a23646" "f5a86d33-94fc-4364-b008-d3d77b1dd84c" "ce1b189c-8644-498b-9b90-fd5c1531846b" "0d013dbb-845f-40e8-bb10-9995938aea6d" "bdc3f874-4f67-48ea-9997-f80a4642524b" "732d7e43-435d-4b83-9a95-23fe4642524b" "d95f2e03-14f0-4754-ba17-225f4642524b" "c7f159a0-4c73-4adc-be67-7b38d4eacf5e" "76395135-cae6-4e8d-a1a0-7f4ff159d579" "7fdd1af6-7088-4bbe-aa20-759581882029" "906fb0c6-a176-4a92-91cd-1ac5274d310c" "6ebadb97-14e0-4b59-a3ba-995f6442e2e2" "b5f87ae1-f63a-4d2f-ae7f-d5a6919199e1" "ef157351-d6d0-4f51-ac28-160e9c4274af" "a27b9e9c-1583-4823-8008-cce6164b6bed" "9ed9a949-ca11-45b5-a80b-44c344d17adc" "449bbe04-ff6b-4d93-b460-4ba34642524b" "2c96071e-c6d7-4a19-a086-3589117a77e9" "4cfea515-5b09-40b1-acd5-4e354a1b864d" "520b1f3e-2442-4d47-9810-f65f46291642" "76e7a9c2-2745-494f-b181-3066503c2f8e" "86bb5af5-949e-4bed-be52-62944eb19bbe" "9e472bfd-a904-4bfa-832f-672163933a4b" "b2cd51ac-8bf9-4bb4-9dcf-6d2e21306fd9" "83df3a7e-f3ce-4937-82fd-42e8f5f1e9ce" "9d44695c-9130-4c5e-9be0-7a714642524b" "53d3a0be-ae20-45e9-8347-d743d358cb90" "2744f9c6-0a67-4459-af27-32ef99658850" "adb57db2-f6fd-4759-ac39-5ccd8841023c" "314818d2-86bf-424b-9a43-8bad9005e114" "3dc8e16f-266e-422e-b982-e8447ac9f45f" "7f3c0c2d-f8cb-46d6-ac75-fc1c4642524b" "a08511fe-b41f-424a-b489-382e6a807eb4")
+        (members "ef157351-d6d0-4f51-ac28-160e9c4274af" "a27b9e9c-1583-4823-8008-cce6164b6bed" "9ed9a949-ca11-45b5-a80b-44c344d17adc" "76e7a9c2-2745-494f-b181-3066503c2f8e" "520b1f3e-2442-4d47-9810-f65f46291642" "b1800b6c-6247-4d83-af5c-c46347a23646" "83df3a7e-f3ce-4937-82fd-42e8f5f1e9ce" "53d3a0be-ae20-45e9-8347-d743d358cb90" "732d7e43-435d-4b83-9a95-23fe4642524b" "bdc3f874-4f67-48ea-9997-f80a4642524b" "449bbe04-ff6b-4d93-b460-4ba34642524b" "7fdd1af6-7088-4bbe-aa20-759581882029" "ce1b189c-8644-498b-9b90-fd5c1531846b" "a08511fe-b41f-424a-b489-382e6a807eb4" "6ebadb97-14e0-4b59-a3ba-995f6442e2e2" "76395135-cae6-4e8d-a1a0-7f4ff159d579" "d95f2e03-14f0-4754-ba17-225f4642524b" "c7f159a0-4c73-4adc-be67-7b38d4eacf5e" "b5f87ae1-f63a-4d2f-ae7f-d5a6919199e1" "9d44695c-9130-4c5e-9be0-7a714642524b" "7f3c0c2d-f8cb-46d6-ac75-fc1c4642524b" "86bb5af5-949e-4bed-be52-62944eb19bbe" "906fb0c6-a176-4a92-91cd-1ac5274d310c" "adb57db2-f6fd-4759-ac39-5ccd8841023c" "4cfea515-5b09-40b1-acd5-4e354a1b864d" "0d013dbb-845f-40e8-bb10-9995938aea6d" "f5a86d33-94fc-4364-b008-d3d77b1dd84c" "5c3b5dea-f249-4d49-95a4-2c1e9015d18f" "2744f9c6-0a67-4459-af27-32ef99658850" "2c96071e-c6d7-4a19-a086-3589117a77e9" "b2cd51ac-8bf9-4bb4-9dcf-6d2e21306fd9" "3dc8e16f-266e-422e-b982-e8447ac9f45f" "9e472bfd-a904-4bfa-832f-672163933a4b" "314818d2-86bf-424b-9a43-8bad9005e114")
     )
     (group "btn"
         (uuid "eb923dcb-c5d8-4cbf-be16-8428c262746e")
@@ -6094,10 +6166,10 @@
     )
     (group "led_green_ind"
         (uuid "1d1c606c-6564-5f67-7265-656e5f696e64")
-        (members "2422f545-1f96-4e6b-b086-e9d04642524b" "4343bc64-2139-432e-b7f2-83527ff1ca51" "43594121-4d7f-4f05-95f5-21fc4642524b")
+        (members "43594121-4d7f-4f05-95f5-21fc4642524b" "2422f545-1f96-4e6b-b086-e9d04642524b" "4343bc64-2139-432e-b7f2-83527ff1ca51")
     )
     (group "led_red_ind"
         (uuid "df88341d-9b6c-6564-5f72-65645f696e64")
-        (members "732cdee5-c261-4d8e-9d0c-02654642524b" "f3b5950c-15c6-4671-b9f6-8e244642524b" "b3860e68-bacf-4778-9614-259a306ac73a")
+        (members "b3860e68-bacf-4778-9614-259a306ac73a" "f3b5950c-15c6-4671-b9f6-8e244642524b" "732cdee5-c261-4d8e-9d0c-02654642524b")
     )
 )

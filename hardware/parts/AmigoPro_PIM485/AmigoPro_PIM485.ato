@@ -12,4 +12,5 @@ component AmigoPro_PIM485 from AmigoPro:
 
     trait is_atomic_part<manufacturer="Pimoroni", partnumber="PIM485", footprint="AmigoPro_PIM485.kicad_mod", symbol="AmigoPro_PIM485.kicad_sym">
     trait has_designator_prefix<prefix="J">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C000000", manufacturer="Pimoroni", partno="PIM485">
     # Supplier: Pimoroni PIM485 (direct). Current picker supports limited suppliers (e.g., lcsc); keeping link in symbol properties.
