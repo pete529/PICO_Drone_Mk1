@@ -1,8 +1,6 @@
-"""
-Raspberry Pi Pico 2W Quadcopter Flight Controller PCB
-Comprehensive signal definition for complete quadcopter design.
-This will generate a proper netlist for KiCad implementation.
-"""
+# Raspberry Pi Pico 2W Quadcopter Flight Controller PCB
+# Comprehensive signal definition for complete quadcopter design.
+# This will generate a proper netlist for KiCad implementation.
 
 #pragma experiment("TRAITS")
 #pragma experiment("BRIDGE_CONNECT")
@@ -47,7 +45,7 @@ module App:
     power_3v3 = new ElectricPower      # Typed 3.3V rail for library packages
     led_red_ind = new LEDIndicatorRed  # Red status LED (GPIO controlled)
     led_green_ind = new LEDIndicatorGreen  # Green status LED (power indicator)
-    gps = new UBlox_NEO6M      # GPS module (UART0)
+    gps = new UBlox_NEO6M   # GPS module (UART0)
     btn = new HorizontalButton         # Power button (momentary)
     motor_l1_conn = new Connector_2Pin_JST_PH  # Motor Left 1 connector (pickable)
     motor_l2_conn = new Connector_2Pin_JST_PH  # Motor Left 2 connector (pickable)
