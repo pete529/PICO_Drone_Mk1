@@ -1,6 +1,6 @@
 # PICO Drone Mk1 – Quadcopter Flight Controller PCB
 
-**Status:** ✅ Hardware design complete with successful atopile builds. Ready for component sourcing and PCB manufacturing.
+**Status:** ✅ Hardware design complete and ATO builds are green. BOM is populated (see `hardware/build/builds/default/default.bom.csv`). All hardware has been procured and is ready for PCB assembly.
 
 > **New:** Complete user stories and GitHub issue management system available. See [GitHub Issues Creation](#github-issues-creation) below.
 
@@ -46,10 +46,10 @@ This project is a complete Raspberry Pi Pico 2W based quadcopter flight controll
 - **Documentation**: Comprehensive guides for building, troubleshooting, and development
 
 ### 🔄 **Next Steps**
-- **Component Sourcing**: Automated part selection from LCSC (BOM currently empty - needs library parts)
-- **PCB Manufacturing**: Generate Gerber files and prepare for fabrication
-- **Software Development**: Flight control algorithms and wireless interface
-- **Testing & Validation**: Hardware testing and flight control validation
+- **PCB Assembly**: Assemble the procured components onto the PCB
+- **Board Bring-up**: Power-on checks, I²C/UART comms, sensor and motor driver validation
+- **Firmware Development**: Flight control algorithms and wireless interface
+- **Testing & Validation**: Bench tests and initial flight validation
 
 ## Build System
 
@@ -77,6 +77,8 @@ ato build --build test_pickable
 - KiCad PCB files (.kicad_pcb)
 - Bill of Materials (.bom.csv) 
 - Netlists and component reports
+
+Note: The populated BOM is available at `hardware/build/builds/default/default.bom.csv` after a successful build.
 
 ### Automated CI/CD
 ✅ **GitHub Actions** runs on every push:
