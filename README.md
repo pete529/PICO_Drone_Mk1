@@ -23,6 +23,20 @@ This project is a complete Raspberry Pi Pico 2W based quadcopter flight controll
 │   ├── layouts/                # KiCad PCB layouts (default + test targets)
 │   ├── build/                  # Generated build artifacts
 │   └── PART_PICKING_GUIDE.md   # Troubleshooting and part selection guide
+├── firmware/                    # Drone firmware & shared protocol utils
+│   ├── shared/
+│   │   └── control_protocol.py  # CSV parser, deadzone/expo, failsafe smoother
+│   └── pico/
+│       ├── udp_server.py        # Pico W MicroPython UDP server (AP + UDP control)
+│       └── drv8833_stub.py      # DRV8833 test mixer/PWM stub for bring‑up
+├── android/                     # Android sender app (Compose)
+│   ├── app/src/main/
+│   │   ├── AndroidManifest.xml
+│   │   └── java/com/petedrone/udpsender/MainActivity.kt
+│   ├── app/build.gradle.kts
+│   ├── settings.gradle.kts
+│   ├── build.gradle.kts
+│   └── gradle/wrapper/gradle-wrapper.properties
 ├── user_stories.md             # Complete user stories (6 epics, 25+ features)
 ├── create_github_issues.ps1    # Script to create GitHub issues from user stories
 ├── create_issues.bat           # Windows batch file for easy execution
@@ -79,6 +93,104 @@ ato build --build test_pickable
 - Netlists and component reports
 
 Note: The populated BOM is available at `hardware/build/builds/default/default.bom.csv` after a successful build.
+
+## Drone control over Wi‑Fi UDP
+
+This repo includes a MicroPython UDP server for Pico W and an Android sender app.
+
+### Pico W (MicroPython) UDP server
+
+Files:
+- `firmware/pico/udp_server.py`
+- Shared helpers in `firmware/shared/control_protocol.py`
+
+Behavior:
+- Starts Wi‑Fi AP: SSID `PicoDrone`, password `drone1234`
+- Listens on UDP port 8888
+- Accepts CSV packets at ~50 Hz: `DRN,{throttle},{roll},{pitch},{yaw}\n` (or without `DRN,`)
+  - Ranges: throttle [0..1], roll/pitch/yaw [-1..1]
+- Optional heartbeat `PING\n` → replies `ACK\n`
+- Failsafe: if no valid packet for >500 ms, throttle soft-lands to 0 over 1.5 s
+
+Bring-up steps:
+1) Flash MicroPython to Pico W (UF2 from micropython.org).
+2) Copy `firmware/` to the board; set `udp_server.py` as main or run from REPL:
+	- In Thonny: File → Open `udp_server.py` → Run
+3) Observe console: AP IP in `ap.ifconfig()`.
+
+Hooking motors: Replace the TODOs in `udp_server.py` with your motor mixer / ESC driver to apply `(throttle, roll, pitch, yaw)` each loop.
+
+Server configuration (in `udp_server.run_server`):
+- `ssid` / `password`: AP SSID/PSK (default `PicoDrone` / `drone1234`)
+- `port`: UDP port (default 8888)
+- `expect_signature`: set `True` to require the `DRN,` packet prefix
+- `deadzone` / `expo`: attitude axis shaping (roll/pitch/yaw)
+- PWM test pins: update `mixer.configure_test_pins([2,3,4,5])` to your GPIOs (or remove to print only)
+
+Safety / failsafe:
+- Link‑loss (>500 ms) triggers a soft throttle ramp to 0 over ~1.5 s (configurable)
+- Always bench‑test with props OFF; verify failsafe before first hover
+
+### Android sender app
+
+Files:
+- `android/app/src/main/java/com/petedrone/udpsender/MainActivity.kt`
+- `android/app/src/main/AndroidManifest.xml`
+- `android/app/build.gradle.kts`
+
+Controls:
+- Dual‑stick style controls and a throttle bar (current build uses Compose sliders arranged like dual sticks; can swap to a joystick view later)
+- Toggle arming (forces throttle 0 when disarmed)
+- Option to include signature prefix `DRN,`
+- Sends CSV every 20 ms (~50 Hz) and records `ACK` if received
+
+Build & install (Android Studio Hedgehog+ recommended):
+1) Open the `android/` folder in Android Studio
+2) Let Gradle sync dependencies (Compose + Material3)
+3) Run on a connected device; accept prompts if any
+
+Optional (Gradle wrapper, from `android/`):
+```powershell
+./gradlew assembleDebug   # build APK
+./gradlew installDebug    # install to connected device
+```
+
+Connect to the Pico:
+1) On phone, join the AP `PicoDrone` (password `drone1234`).
+2) Open the app; Pico IP is typically `192.168.4.1`, Port `8888`.
+3) Toggle Armed and move sliders; the app will emit `DRN,{t},{r},{p},{y}\n` at ~50 Hz.
+4) In the Pico console, you should see activity and occasional `ACK` in the app.
+
+Optional features to enable next:
+- Arming switch latch / stick combination
+- Deadzone/expo tuning (already supported in server)
+- Packet signature enforcement (set `expect_signature=True` in server)
+- Simple telemetry back to app (battery, RSSI)
+
+### Tests
+
+Run parser/failsafe tests locally (CPython):
+
+```powershell
+py -m pip install pytest
+pytest -q tests/test_control_protocol.py
+```
+
+## Quick Start (end‑to‑end)
+
+1) Build hardware (optional now): `ato build` (see Build System above)
+2) Pico W
+	- Flash MicroPython UF2
+	- Open `firmware/pico/udp_server.py` in Thonny and Run
+	- Confirm AP `PicoDrone` is active; note IP (typically `192.168.4.1`)
+3) Phone
+	- Join `PicoDrone` Wi‑Fi (`drone1234`)
+	- Install and open the Android app (from `android/` in Android Studio)
+	- Set IP to `192.168.4.1`, Port `8888`, enable `DRN,` if server expects it, Arm ON
+	- Move sticks — app sends CSV at ~50 Hz and displays `ACK` on replies
+4) On the bench (NO PROPS)
+	- Verify throttle response and failsafe (stop app → throttle should ramp to 0)
+	- Adjust deadzone/expo if needed
 
 ### Automated CI/CD
 ✅ **GitHub Actions** runs on every push:
