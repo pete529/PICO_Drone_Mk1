@@ -19,6 +19,7 @@ except Exception:
     # Desktop linting stubs
     class _NW:
         AP_IF = 0
+        STA_IF = 1
         AUTH_WPA_WPA2_PSK = 0
         def WLAN(self, *_args, **_kw):
             raise RuntimeError("network.WLAN not available on desktop")
@@ -40,7 +41,9 @@ except Exception:
 
 
 AP_SSID = "PicoDrone"
-AP_PASSWORD = "drone1234"  # 8+ chars for WPA2 AP
+AP_PASSWORD = "drone529!"  # 8+ chars for WPA2 AP
+STA_SSID = "PicoDrone"
+STA_PASSWORD = "drone529!"
 UDP_PORT = 8888
 FAILSAFE_MS = 500
 SOFT_LAND_MS = 1500  # ramp-down duration when failsafe triggers
@@ -73,16 +76,43 @@ def start_ap(ssid: str = AP_SSID, password: str = AP_PASSWORD):
     return ap
 
 
+def connect_sta(ssid: str = STA_SSID, password: str = STA_PASSWORD, timeout_ms: int = 20000):
+    """Connect to an existing Wi‑Fi network and wait until connected or raise error after ~20s."""
+    sta = network.WLAN(getattr(network, 'STA_IF', 1))
+    sta.active(True)
+    try:
+        sta.connect(ssid, password)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    t0 = time.ticks_ms()
+    while True:
+        try:
+            if getattr(sta, 'isconnected', lambda: False)():
+                break
+        except Exception:
+            pass
+        if time.ticks_diff(time.ticks_ms(), t0) > timeout_ms:
+            # Not connected after timeout
+            raise RuntimeError("Failed to connect to Wi‑Fi SSID '%s' within %ds" % (ssid, timeout_ms // 1000))
+        # retry every 1 second
+        time.sleep_ms(1000)
+    return sta
+
+
 def run_server(
     *,
-    ssid: str = AP_SSID,
-    password: str = AP_PASSWORD,
+    ssid: str = STA_SSID,
+    password: str = STA_PASSWORD,
     port: int = UDP_PORT,
     expect_signature: bool = False,
     deadzone: float = 0.05,
     expo: float = 0.2,
+    use_ap: bool = False,
 ):
-    ap = start_ap(ssid, password)
+    if use_ap:
+        wlan = start_ap(ssid, password)
+    else:
+        wlan = connect_sta(ssid, password)
     addr = ("0.0.0.0", port)
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.settimeout(0.05)  # 50ms poll
@@ -122,7 +152,10 @@ def run_server(
     last_ok_ms = time.ticks_ms()
 
     print("UDP server listening on:", addr)
-    print("AP IP:", ap.ifconfig())
+    try:
+        print("WLAN ifconfig:", wlan.ifconfig())
+    except Exception:
+        pass
 
     while True:
         try:

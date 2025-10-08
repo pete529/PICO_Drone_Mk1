@@ -29,15 +29,15 @@ fun Joystick(
             .size(size)
             .background(MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium)
             .pointerInput(Unit) {
-                detectDragGestures(onDragStart = { offset ->
+                detectDragGestures(onDragStart = { _ ->
                     knob = Offset(0f, 0f)
                 }, onDragEnd = {
                     knob = Offset(0f, 0f)
                     onChange(0f, 0f)
                 }) { change, drag ->
                     change.consume()
-                    val w = size.toPx()
-                    val r = w / 2f
+                    val w = this.size.width
+                    val r = w / 2.0f
                     val nx = (knob.x + drag.x) / r
                     val ny = (knob.y + drag.y) / r
                     // Clamp to circle radius 1
@@ -46,15 +46,15 @@ fun Joystick(
                     knob = Offset(clx * r, cly * r)
                     var outX = clx
                     var outY = -cly // invert Y so up is +1
-                    if (abs(outX) < deadzone) outX = 0f
-                    if (abs(outY) < deadzone) outY = 0f
+                    if (kotlin.math.abs(outX) < deadzone) outX = 0f
+                    if (kotlin.math.abs(outY) < deadzone) outY = 0f
                     onChange(outX, outY)
                 }
             },
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val r = min(size.width.toPx(), size.height.toPx()) / 2f
+            val r = min(this.size.width, this.size.height) / 2f
             // Outer ring
             drawCircle(color = Color.DarkGray, radius = r)
             // Inner knob
@@ -70,7 +70,10 @@ fun DualJoysticks(
     onRight: (x: Float, y: Float) -> Unit,
     deadzone: Float = 0.05f,
 ) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Joystick(deadzone = deadzone, onChange = onLeft)
         Joystick(deadzone = deadzone, onChange = onRight)
     }
