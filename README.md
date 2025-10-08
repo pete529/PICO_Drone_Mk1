@@ -1,11 +1,11 @@
-# PICO Drone Mk1 – Quadcopter Flight Controller PCB
+# PICO Drone Mk1 – Small Quadcopter 
 
 **Status:** ✅ Hardware design complete and ATO builds are green. BOM is populated (see `hardware/build/builds/default/default.bom.csv`). All hardware has been procured and is ready for PCB assembly.
 
 > **New:** Complete user stories and GitHub issue management system available. See [GitHub Issues Creation](#github-issues-creation) below.
 
 ## Overview
-This project is a complete Raspberry Pi Pico 2W based quadcopter flight controller featuring:
+This project is a complete Raspberry Pi Pico 2W based quadcopter featuring:
 - **Raspberry Pi Pico 2W** module (Wi-Fi enabled RP2040 with wireless connectivity)
 - **Dual DRV8833** motor driver ICs (4 independent brushed motor outputs)  
 - **GY-91 9-DOF IMU** (ICM-20948 + BMP280 for orientation, acceleration, and altitude)
@@ -13,6 +13,7 @@ This project is a complete Raspberry Pi Pico 2W based quadcopter flight controll
 - **Status LEDs** (power indicator and user-controllable status)
 - **User controls** (power button and mode switching)
 - **Robust design** with proper power filtering and protection circuits
+- **An Android application** that arms and controls the drone via UDP packets
 
 ## Project Structure
 ```
@@ -138,11 +139,13 @@ Files:
 - `android/app/src/main/AndroidManifest.xml`
 - `android/app/build.gradle.kts`
 
-Controls:
-- Dual‑stick style controls and a throttle bar (current build uses Compose sliders arranged like dual sticks; can swap to a joystick view later)
-- Toggle arming (forces throttle 0 when disarmed)
-- Option to include signature prefix `DRN,`
-- Sends CSV every 20 ms (~50 Hz) and records `ACK` if received
+Controls & UX highlights:
+- Dual‑joystick Compose controls (left stick: yaw + throttle; right stick: roll + pitch) with deadzone filtering
+- Always‑on Material 3 dark theme so labels remain legible in night operations
+- Bright yellow drone launcher icon for quick access on the device home screen
+- `Armed` toggle that forces throttle to `0` when disabled
+- Optional signature prefix toggle (`DRN,`) to satisfy strict firmware configs
+- 50 Hz UDP stream with inline `ACK` parsing for battery voltage (`BAT=`) and RSSI telemetry when available
 
 Build & install (Android Studio Hedgehog+ recommended):
 1) Open the `android/` folder in Android Studio
@@ -161,11 +164,13 @@ Connect to the Pico:
 3) Toggle Armed and move sliders; the app will emit `DRN,{t},{r},{p},{y}\n` at ~50 Hz.
 4) In the Pico console, you should see activity and occasional `ACK` in the app.
 
-Optional features to enable next:
+📘 **Documentation:** See `docs/mobile_app_user_guide.md` for a complete walkthrough of installation, controls, telemetry, and troubleshooting tips.
+
+Upcoming enhancements to consider next:
 - Arming switch latch / stick combination
-- Deadzone/expo tuning (already supported in server)
-- Packet signature enforcement (set `expect_signature=True` in server)
-- Simple telemetry back to app (battery, RSSI)
+- In‑app deadzone/expo tuning (server already supports it)
+- Packet signature enforcement by default (`expect_signature=True`)
+- Simple outbound telemetry from Pico to display battery/RSSI history charts
 
 ### Tests
 
@@ -173,7 +178,7 @@ Run parser/failsafe tests locally (CPython):
 
 ```powershell
 py -m pip install pytest
-pytest -q tests/test_control_protocol.py
+py -m pytest
 ```
 
 ## Quick Start (end‑to‑end)
