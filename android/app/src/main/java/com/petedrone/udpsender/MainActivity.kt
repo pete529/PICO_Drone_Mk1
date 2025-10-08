@@ -48,10 +48,36 @@ fun SenderScreen() {
         OutlinedTextField(value = ip, onValueChange = { ip = it }, label = { Text("Pico IP (AP)") })
         OutlinedTextField(value = port, onValueChange = { port = it }, label = { Text("UDP Port") })
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Armed")
-            Switch(checked = armed, onCheckedChange = { armed = it })
-            Text("Signature DRN")
-            Switch(checked = useSignature, onCheckedChange = { useSignature = it })
+            Text(
+                text = "Armed",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Switch(
+                checked = armed,
+                onCheckedChange = { armed = it },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                )
+            )
+            Text(
+                text = "Signature DRN",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Switch(
+                checked = useSignature,
+                onCheckedChange = { useSignature = it },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                )
+            )
         }
         // Dual joysticks: left (yaw/throttle Y), right (roll/pitch)
         DualJoysticks(
