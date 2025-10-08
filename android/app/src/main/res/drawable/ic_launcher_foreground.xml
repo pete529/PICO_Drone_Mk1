@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Yellow drone icon on transparent background -->
+    <!-- Drone body (center) -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M46,46 L62,46 L62,62 L46,62 Z" />
+    
+    <!-- Drone arms -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M54,30 L54,46 L46,46 L46,30 L50,26 L54,30 Z" />
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M62,50 L78,50 L82,54 L78,58 L62,58 L62,50 Z" />
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M54,62 L54,78 L50,82 L46,78 L46,62 L54,62 Z" />
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M46,50 L30,50 L26,54 L30,58 L46,58 L46,50 Z" />
+    
+    <!-- Propellers as paths instead of ellipses -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M42,22 Q50,18 58,22 Q50,26 42,22 Z" />
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M82,50 Q86,58 82,66 Q78,58 82,50 Z" />
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M42,86 Q50,90 58,86 Q50,82 42,86 Z" />
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M26,50 Q22,58 26,66 Q30,58 26,50 Z" />
+        
+    <!-- Center camera/gimbal -->
+    <path
+        android:fillColor="#FF8F00"
+        android:pathData="M50,50 m-4,0 a4,4 0 1,1 8,0 a4,4 0 1,1 -8,0" />
+</vector>
