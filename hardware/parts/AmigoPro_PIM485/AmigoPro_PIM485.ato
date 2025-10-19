@@ -3,7 +3,7 @@
 import is_atomic_part
 import has_designator_prefix
 import has_part_picked
-from "atopile/components/amigo_pro.ato" import AmigoPro
+from "atopile/components/AmigoPro.ato" import AmigoPro
 
 component AmigoPro_PIM485 from AmigoPro:
     """Pimoroni LiPo Amigo Pro (PIM485) module as a pickable atomic part.

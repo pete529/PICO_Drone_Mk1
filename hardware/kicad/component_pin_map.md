@@ -44,7 +44,7 @@
 | 6   | nFAULT | (test pad) | Optional status |
 | 7   | VREF   | (NC or tuned) | If current limiting used |
 | 8   | GND    | GND | Ground |
-| 9   | GND    | GND | Thermal pad (if exposed) |
+| 9   | GND (Thermal Pad) | GND | Connect thermal pad to GND if exposed |
 | 10  | VM     | +MOTOR | Motor supply |
 | 11  | OUT1A  | MOTOR_L1 / MOTOR_R1 | Off-board to motor |
 | 12  | OUT1B  | MOTOR_L2 / MOTOR_R2 |  |
@@ -54,7 +54,7 @@
 ## IMU (ICM-20948) (Adafruit Breakout)
 | Breakout Pin | Net | Notes |
 |--------------|-----|-------|
-| VIN          | +3V3 | (Or +5 -> internal LDO) Prefer +3V3 |
+| VIN          | +3V3 |  (Or +5 -> internal LDO) Prefer +3V3 |
 | 3V3          | +3V3 | If powering from 3V3 only one is used |
 | GND          | GND |  |
 | SCL          | SCL |  |

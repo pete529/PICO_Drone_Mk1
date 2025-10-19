@@ -3,9 +3,9 @@
 import is_atomic_part
 import has_designator_prefix
 import has_part_picked
-from "atopile/components/gy91.ato" import Gy91
+from "atopile/components/GY91.ato" import GY91
 
-component GY_91_Module from Gy91:
+component GY_91_Module from GY91:
     """GY-91 breakout module (MPU-9250 + BMP280), treated as a single purchasable module."""
 
     trait is_atomic_part<manufacturer="Generic", partnumber="GY-91", footprint="GY-91.kicad_mod", symbol="GY-91.kicad_sym">

@@ -1,271 +1,110 @@
 """
 Raspberry Pi Pico 2W Quadcopter Flight Controller PCB
-Comprehensive signal definition for complete quadcopter design.
-This will generate a proper netlist for KiCad implementation.
 """
 
-#pragma experiment("TRAITS")
-
-# Component module imports
-from "atopile/components/pico2w.ato" import Pico2W
-from "atopile/components/drv8833.ato" import Drv8833
-from "atopile/components/gy91.ato" import Gy91
-from "atopile/components/amigo_pro.ato" import AmigoPro
-from "atopile/components/leds.ato" import Led0603
-from "atopile/components/switch.ato" import SwitchSpst
-from "atopile/components/headers.ato" import Header2P
-from "lib/r_test.ato" import RTest
-
-# Import library modules for picking
-module PickableResistor:
-    resistance: ohm
-    max_power: W = 0.1W
-    package: dimensionless = "0603"
-    # Use numbered pins like original for compatibility
-    pin 1
-    pin 2
+from "components/Pico2W.ato" import Pico2W
+from "components/DRV8833.ato" import DRV8833
+from "components/GY91.ato" import GY91
+from "components/AmigoPro.ato" import AmigoPro
+from "components/leds.ato" import Led0603
+from "components/switch.ato" import SwitchSpst
+from "components/headers.ato" import Header2P
+from "components/resistor.ato" import Resistor
+from "atopile/bosch-bmp280/bmp280.ato" import BMP280_driver
 
 module App:
-    """Main quadcopter flight controller board"""
+    """Main quadcopter flight controller"""
     
-    # ===========================================
-    # POWER DISTRIBUTION SIGNALS
-    # ===========================================
-    signal VBAT        # LiPo battery voltage (3.7V nominal)
-    signal VSYS        # System voltage from Amigo Pro
-    signal VCC_5V      # 5V rail from Amigo Pro (for motors)
-    signal VCC_3V3     # 3.3V rail from Pico (for logic/sensors)
-    signal GND         # Ground reference
+    # Components
+    pico = new Pico2W
+    drv_left = new DRV8833
+    drv_right = new DRV8833
+    imu = new GY91
+    baro = new BMP280_driver
+    power_mgr = new AmigoPro
     
-    # ===========================================
-    # RASPBERRY PI PICO 2W SIGNALS
-    # ===========================================
-    # Motor control GPIOs (8 pins for 2x DRV8833)
-    signal PICO_GP0    # DRV8833_L AIN1 (Left motor 1 direction A)
-    signal PICO_GP1    # DRV8833_L AIN2 (Left motor 1 direction B)
-    signal PICO_GP2    # DRV8833_L BIN1 (Left motor 2 direction A)
-    signal PICO_GP3    # DRV8833_L BIN2 (Left motor 2 direction B)
-    signal PICO_GP4    # DRV8833_R AIN1 (Right motor 1 direction A)
-    signal PICO_GP5    # DRV8833_R AIN2 (Right motor 1 direction B)
-    signal PICO_GP6    # DRV8833_R BIN1 (Right motor 2 direction A)
-    signal PICO_GP7    # DRV8833_R BIN2 (Right motor 2 direction B)
+    led_red = new Led0603
+    led_green = new Led0603
+    r_led_red = new Resistor
+    r_led_green = new Resistor
     
-    # Motor driver enable/sleep signals
-    signal PICO_GP8    # DRV8833_L SLEEP (Left driver enable)
-    signal PICO_GP9    # DRV8833_R SLEEP (Right driver enable)
+    pwr_button = new SwitchSpst
+    r_button_pullup = new Resistor
     
-    # I2C bus for sensors
-    signal PICO_GP26_SDA  # I2C SDA (to ICM-20946 and BMP280)
-    signal PICO_GP27_SCL  # I2C SCL (to ICM-20946 and BMP280)
+    motor_l1 = new Header2P
+    motor_l2 = new Header2P
+    motor_r1 = new Header2P
+    motor_r2 = new Header2P
     
-    # Status LEDs and button
-    signal PICO_GP13   # Power button input (with pull-up)
-    signal PICO_GP14   # Red LED control (activity indicator)
-    signal PICO_GP15   # Green LED control (power indicator)
-    
-    # Sensor interrupt/status signals
-    signal PICO_GP16   # IMU interrupt pin
-    signal PICO_GP17   # Spare GPIO
-    signal PICO_GP18   # Spare GPIO
-    
-    # ===========================================
-    # MOTOR DRIVER SIGNALS (2x DRV8833)
-    # ===========================================
-    # Left DRV8833 motor outputs
-    signal MOTOR_L1_AOUT  # Left motor 1 output A
-    signal MOTOR_L1_BOUT  # Left motor 1 output B
-    signal MOTOR_L2_AOUT  # Left motor 2 output A  
-    signal MOTOR_L2_BOUT  # Left motor 2 output B
-    
-    # Right DRV8833 motor outputs
-    signal MOTOR_R1_AOUT  # Right motor 1 output A
-    signal MOTOR_R1_BOUT  # Right motor 1 output B
-    signal MOTOR_R2_AOUT  # Right motor 2 output A
-    signal MOTOR_R2_BOUT  # Right motor 2 output B
-    
-    # Motor power and fault signals
-    signal DRV8833_L_FAULT  # Left driver fault output
-    signal DRV8833_R_FAULT  # Right driver fault output
-    
-    # DRV8833 control signals that need to be connected
-    signal DRV8833_L_AIN1
-    signal DRV8833_L_AIN2
-    signal DRV8833_L_BIN1
-    signal DRV8833_L_BIN2
-    signal DRV8833_L_SLEEP
-    signal DRV8833_R_AIN1
-    signal DRV8833_R_AIN2
-    signal DRV8833_R_BIN1
-    signal DRV8833_R_BIN2
-    signal DRV8833_R_SLEEP
-    
-    # ===========================================
-    # SENSOR SIGNALS
-    # ===========================================
-    # ICM-20946 IMU (I2C interface)
-    signal ICM20946_SDA    # Connected to I2C bus
-    signal ICM20946_SCL    # Connected to I2C bus  
-    signal ICM20946_INT    # Interrupt output
-    signal ICM20946_VCC    # 3.3V power
-    signal ICM20946_GND    # Ground
-    
-    # BMP280 Pressure/Temperature sensor (I2C interface)
-    signal BMP280_SDA      # Connected to I2C bus
-    signal BMP280_SCL      # Connected to I2C bus
-    signal BMP280_VCC      # 3.3V power
-    signal BMP280_GND      # Ground
-    
-    # ===========================================
-    # LED CIRCUITS
-    # ===========================================
-    # Green LED (power indicator) - always on when powered
-    signal LED_GREEN_ANODE
-    signal LED_GREEN_CATHODE
-    signal LED_GREEN_RESISTOR  # 1K current limiting resistor
-    
-    # Red LED (activity indicator) - controlled by GPIO
-    signal LED_RED_ANODE  
-    signal LED_RED_CATHODE
-    signal LED_RED_RESISTOR    # 1K current limiting resistor
-    
-    # ===========================================
-    # POWER BUTTON CIRCUIT
-    # ===========================================
-    signal BUTTON_PWR_SW1      # Switch contact 1
-    signal BUTTON_PWR_SW2      # Switch contact 2
-    signal BUTTON_PWR_PULLUP   # Pull-up resistor (10K)
-    
-    # ===========================================
-    # MOTOR CONNECTORS
-    # ===========================================
-    # 4-pin connectors for external 720 motors
-    signal MOTOR_L1_CONNECTOR_1  # Left motor 1 wire 1
-    signal MOTOR_L1_CONNECTOR_2  # Left motor 1 wire 2
-    signal MOTOR_L2_CONNECTOR_1  # Left motor 2 wire 1  
-    signal MOTOR_L2_CONNECTOR_2  # Left motor 2 wire 2
-    signal MOTOR_R1_CONNECTOR_1  # Right motor 1 wire 1
-    signal MOTOR_R1_CONNECTOR_2  # Right motor 1 wire 2
-    signal MOTOR_R2_CONNECTOR_1  # Right motor 2 wire 1
-    signal MOTOR_R2_CONNECTOR_2  # Right motor 2 wire 2
-    
-    # ===========================================
-    # POWER MANAGEMENT (AMIGO PRO)
-    # ===========================================
-    signal AMIGO_VBAT_IN       # Battery input
-    signal AMIGO_VBAT_OUT      # Battery output to system
-    signal AMIGO_5V_OUT        # 5V regulated output
-    signal AMIGO_GND           # Ground
-    signal AMIGO_CHARGE_STATUS # Charging status LED
-    
-    # ===========================================
-    # SIGNAL CONNECTIONS (NETLIST)
-    # ===========================================
-    # ===========================================
-    # COMPONENT INSTANTIATIONS (initial)
-    # ===========================================
-    pico = new Pico2W                  # Raspberry Pi Pico 2W module
-    drv_left = new Drv8833             # Left side DRV8833 (motors L1, L2)
-    drv_right = new Drv8833            # Right side DRV8833 (motors R1, R2)
-    imu = new Gy91                     # GY-91 module (includes IMU + baro)
-    power = new AmigoPro               # LiPo Amigo Pro power module
-    led_red = new Led0603              # Red status LED
-    led_green = new Led0603            # Green status LED
-    pwr_switch = new SwitchSpst        # Power switch
-    motor_l1_conn = new Header2P       # Motor Left 1 connector
-    motor_l2_conn = new Header2P       # Motor Left 2 connector
-    motor_r1_conn = new Header2P       # Motor Right 1 connector
-    motor_r2_conn = new Header2P       # Motor Right 2 connector
-    # Passive components with constraints for picker
-    r_led_red = new PickableResistor       # Red LED series resistor
+    # Resistor constraints
     r_led_red.resistance = 1kohm +/- 5%
     r_led_red.package = "0603"
-    
-    r_led_green = new PickableResistor     # Green LED series resistor
     r_led_green.resistance = 1kohm +/- 5%
     r_led_green.package = "0603"
-    
-    r_button_pullup = new PickableResistor # Button pull-up resistor
     r_button_pullup.resistance = 10kohm +/- 5%
     r_button_pullup.package = "0603"
-    r_experiment = new RTest           # Experimental test part for picker
+    
+    # Power distribution
+    power_mgr.power_5v ~ drv_left.power_motor
+    power_mgr.power_5v ~ drv_right.power_motor
 
-    # Connect I2C bus
-    ICM20946_SDA ~ PICO_GP26_SDA
-    ICM20946_SCL ~ PICO_GP27_SCL
-    BMP280_SDA ~ PICO_GP26_SDA
-    BMP280_SCL ~ PICO_GP27_SCL
-    
-    # Connect motor control signals
-    PICO_GP0 ~ DRV8833_L_AIN1
-    PICO_GP1 ~ DRV8833_L_AIN2
-    PICO_GP2 ~ DRV8833_L_BIN1
-    PICO_GP3 ~ DRV8833_L_BIN2
-    PICO_GP4 ~ DRV8833_R_AIN1
-    PICO_GP5 ~ DRV8833_R_AIN2
-    PICO_GP6 ~ DRV8833_R_BIN1
-    PICO_GP7 ~ DRV8833_R_BIN2
-    
-    # Connect enable signals
-    PICO_GP8 ~ DRV8833_L_SLEEP
-    PICO_GP9 ~ DRV8833_R_SLEEP
-    
-    # LED circuits: Red (GPIO controlled) and Green (power indicator always on)
-    pico.GP14 ~ r_led_red.unnamed[0]
-    r_led_red.unnamed[1] ~ led_red.A
-    led_red.K ~ GND
 
-    r_led_green.unnamed[0] ~ VCC_3V3
-    r_led_green.unnamed[1] ~ led_green.A
-    led_green.K ~ GND
+    # If something expected “VBAT”, connect to the correct rail:
+    # For battery input to charger:
+    # batt_conn.power ~ power_mgr.power_batt_in
+    # For battery output from charger/regulator:
+    # flight_3v3_reg.input ~ power_mgr.power_batt_out
     
-    # Connect button
-    pico.GP13 ~ pwr_switch.2
-    pwr_switch.1 ~ VBAT
-    r_button_pullup.unnamed[0] ~ pico.GP13
-    r_button_pullup.unnamed[1] ~ VCC_3V3
+    pico.power ~ imu.power
+    pico.power ~ baro.power
+    pico.power ~ drv_left.power_logic
+    pico.power ~ drv_right.power_logic
     
-    # Connect sensor interrupt
-    PICO_GP16 ~ ICM20946_INT
+    # I2C bus
+    pico.i2c ~ imu.i2c
+    pico.i2c ~ baro.i2c
     
-    # Instance-level motor driver wiring (control signals)
+    # IMU interrupt
+    pico.GP16 ~ imu.INT
+    
+# Motor control - left
     pico.GP0 ~ drv_left.AIN1
     pico.GP1 ~ drv_left.AIN2
     pico.GP2 ~ drv_left.BIN1
     pico.GP3 ~ drv_left.BIN2
+    pico.GP8 ~ drv_left.SLEEP   // renamed to SLEEP
+    
+# Motor control - right
     pico.GP4 ~ drv_right.AIN1
     pico.GP5 ~ drv_right.AIN2
     pico.GP6 ~ drv_right.BIN1
     pico.GP7 ~ drv_right.BIN2
-    pico.GP8 ~ drv_left.SLEEP
-    pico.GP9 ~ drv_right.SLEEP
+    pico.GP9 ~ drv_right.SLEEP  // renamed to SLEEP
+    
+    # Motor outputs
+    drv_left.AOUT1 ~ motor_l1.1
+    drv_left.AOUT2 ~ motor_l1.2
+    drv_left.BOUT1 ~ motor_l2.1
+    drv_left.BOUT2 ~ motor_l2.2
+    
+    drv_right.AOUT1 ~ motor_r1.1
+    drv_right.AOUT2 ~ motor_r1.2
+    drv_right.BOUT1 ~ motor_r2.1
+    drv_right.BOUT2 ~ motor_r2.2
+    
+    # LEDs
+    pico.GP14 ~ r_led_red.unnamed[0]
+    r_led_red.unnamed[1] ~ led_red.A
+    led_red.K ~ pico.GND
+    
+    pico.V3V3 ~ r_led_green.unnamed[0]
+    r_led_green.unnamed[1] ~ led_green.A
+    led_green.K ~ pico.GND
+    
+    # Button
+    pico.GP13 ~ pwr_button.1
+    pwr_button.2 ~ pico.GND
+    pico.GP13 ~ r_button_pullup.unnamed[0]
+    r_button_pullup.unnamed[1] ~ pico.V3V3
 
-    # Motor driver outputs direct to motor connectors
-    drv_left.AOUT1 ~ motor_l1_conn.1
-    drv_left.AOUT2 ~ motor_l1_conn.2
-    drv_left.BOUT1 ~ motor_l2_conn.1
-    drv_left.BOUT2 ~ motor_l2_conn.2
-    drv_right.AOUT1 ~ motor_r1_conn.1
-    drv_right.AOUT2 ~ motor_r1_conn.2
-    drv_right.BOUT1 ~ motor_r2_conn.1
-    drv_right.BOUT2 ~ motor_r2_conn.2
 
-    # I2C bus and IMU interrupt (retain existing high-level signals if needed)
-    pico.SDA ~ imu.SDA
-    pico.SCL ~ imu.SCL
-    pico.GP16 ~ imu.INT
-
-    # Power rails
-    power.VBAT_OUT ~ VSYS
-    pico.VSYS ~ VSYS
-    power.V5 ~ VCC_5V
-    drv_left.VM ~ VCC_5V
-    drv_right.VM ~ VCC_5V
-    pico.V3V3 ~ VCC_3V3
-    imu.VCC ~ VCC_3V3
-
-    # Grounds
-    power.GND ~ GND
-    pico.GND ~ GND
-    drv_left.GND ~ GND
-    drv_right.GND ~ GND
-    imu.GND ~ GND

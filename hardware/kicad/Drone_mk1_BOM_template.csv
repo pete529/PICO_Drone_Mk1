@@ -1,0 +1,20 @@
+Designator(s),Quantity,Value / Description,Manufacturer,MPN,Package / Footprint,Supplier,Supplier Part No,Notes
+U1,1,Raspberry Pi Pico 2 W module,Raspberry Pi,,Module_RaspberryPi_Pico_2W (40-pin headers),,,"If using pin headers, list headers separately"
+"U2,U3",2,Dual DC Motor Driver,Texas Instruments,DRV8833PWP,HTSSOP-16 (PWP),,,
+IMU1,1,GY-91 IMU module (MPU9250 + BMP280),,,Module_2x5P_2.54mm header,,,"If you're using a different IMU, update this row"
+U4,1,BMP280 barometric sensor (if separate),Bosch,BMP280,LGA-8,,,Remove if using GY-91 only
+PWR1,1,Pimoroni LiPo Amigo Pro charger/boost module,Pimoroni,,Module JST-PH + 5V/3.7V pads,,,Confirm voltage rail choice (3.7V or 5V)
+SW1,1,Power switch (slide),,,SMD/TH slide switch,,,
+"J1,J2,J3,J4",4,Motor connector,JST,B2B-PH,JST-PH-2,,,
+J5,1,Battery connector,JST,B2B-PH,JST-PH-2,,,
+J6,1,USB (if onboard) or header,,,,,,
+D1,1,LED Green 0603,,,0603,,,Armed indicator
+D2,1,LED Red 0603,,,0603,,,Motion indicator
+"R1,R2",2,LED current-limit resistor 1k,,,0603,,,
+C1-C10,10,0.1uF 25V X7R,,,0603,,,Decoupling
+"C11,C12",2,10uF 10V X5R,,,0603,,,
+C13,1,100uF electrolytic,,,Radial,,,Optional bulk
+"H1,H2",2,40-pin 2.54mm header (for Pico module),,,TH 1x20 (x2),,,If using Pico as plug-in module
+J7,1,I2C/SPI breakout header,,,1x05 2.54mm,,,
+U5,1,3.3V LDO regulator,,,SOT-223/SOT-23-5,,,Only if not powered by Pico module
+TP1-TP5,5,Test points,,,SMD pad,,,

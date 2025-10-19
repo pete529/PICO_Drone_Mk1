@@ -1,14 +1,43 @@
-component Drv8833:
-	# DRV8833 dual H-bridge (simplified). Real part selection will come from a package or explicit part binding.
-	pin AIN1
-	pin AIN2
-	pin BIN1
-	pin BIN2
-	pin SLEEP
-	pin nFAULT
-	pin AOUT1
-	pin AOUT2
-	pin BOUT1
-	pin BOUT2
-	pin VM
-	pin GND
+"""
+TI DRV8833 Dual H-Bridge Motor Driver
+Matches footprint pins: AIN1, AIN2, BIN1, BIN2, AOUT1, AOUT2, BOUT1, BOUT2, VM, GND, SLEEP, nFAULT
+"""
+import ElectricPower
+import Electrical
+
+component DRV8833:
+    power_motor = new ElectricPower
+
+    # Control
+    AIN1 = new Electrical
+    AIN2 = new Electrical
+    BIN1 = new Electrical
+    BIN2 = new Electrical
+    SLEEP = new Electrical
+    nFAULT = new Electrical
+
+    # Outputs
+    AOUT1 = new Electrical
+    AOUT2 = new Electrical
+    BOUT1 = new Electrical
+    BOUT2 = new Electrical
+
+    # Pins (exactly as footprint)
+    pin VM
+    pin GND
+    pin AIN1
+    pin AIN2
+    pin BIN1
+    pin BIN2
+    pin SLEEP
+    pin nFAULT
+    pin AOUT1
+    pin AOUT2
+    pin BOUT1
+    pin BOUT2
+
+    # Power map
+    power_motor.hv ~ VM
+    power_motor.lv ~ GND
+
+    assert power_motor.voltage within 2.7V to 10.8V

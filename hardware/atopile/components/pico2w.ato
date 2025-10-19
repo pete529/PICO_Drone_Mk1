@@ -1,25 +1,50 @@
+"""
+Raspberry Pi Pico 2 W (RP2350)
+Exposes I2C and GPIO needed for the design.
+"""
+
+import Electrical
+import ElectricPower
+import I2C
+
 component Pico2W:
-	# Raspberry Pi Pico 2W (simplified pin subset for control + power)
-	# NOTE: metadata (designator/value/footprint) removed; real part binding will come from a package.
-	pin GP0
-	pin GP1
-	pin GP2
-	pin GP3
-	pin GP4
-	pin GP5
-	pin GP6
-	pin GP7
-	pin GP8
-	pin GP9
-	pin GP13
-	pin GP14
-	pin GP15
-	pin GP16
-	pin GP17
-	pin GP18
-	pin SDA
-	pin SCL
-	pin VBUS
-	pin VSYS
-	pin V3V3
-	pin GND
+    power = new ElectricPower       # VSYS domain
+    power_3v3 = new ElectricPower   # 3V3 domain
+    i2c = new I2C
+
+    # Physical pins (match footprint pin names)
+    pin VSYS
+    pin VBUS
+    pin V3V3
+    pin GND
+    pin SCL
+    pin SDA
+    pin GP0
+    pin GP1
+    pin GP2
+    pin GP3
+    pin GP4
+    pin GP5
+    pin GP6
+    pin GP7
+    pin GP8
+    pin GP9
+    pin GP13
+    pin GP14
+    pin GP15
+    pin GP16
+    pin GP17
+    pin GP18
+
+    # Map power interfaces
+    power.hv ~ VSYS
+    power.lv ~ GND
+
+    power_3v3.hv ~ V3V3
+    power_3v3.lv ~ GND
+
+    # Map I2C to physical pins
+    i2c.scl.line ~ SCL
+    i2c.sda.line ~ SDA
+    i2c.scl.reference ~ power_3v3
+    i2c.sda.reference ~ power_3v3

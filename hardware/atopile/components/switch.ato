@@ -1,4 +1,10 @@
+"""
+Standard switches
+"""
+
+import Electrical
+
 component SwitchSpst:
-	# SPST slide switch (abstract)
-	pin 1
-	pin 2
+    """SPST tactile switch"""
+    pin 1
+    pin 2

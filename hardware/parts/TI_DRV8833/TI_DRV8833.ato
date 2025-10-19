@@ -3,9 +3,9 @@
 import is_atomic_part
 import has_designator_prefix
 import has_part_picked
-from "atopile/components/drv8833.ato" import Drv8833
+from "atopile/components/DRV8833.ato" import DRV8833
 
-component TI_DRV8833 from Drv8833:
+component TI_DRV8833 from DRV8833:
     """TI DRV8833 Dual H-Bridge Motor Driver (HTSSOP or similar)."""
 
     trait is_atomic_part<manufacturer="Texas Instruments", partnumber="DRV8833", footprint="TI_DRV8833.kicad_mod", symbol="DRV8833.kicad_sym">

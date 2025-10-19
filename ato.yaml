@@ -1,7 +1,5 @@
 requires-atopile: 0.12.4
 
-# Root config delegates to hardware/ source so `ato view` works from repo root
-
 paths:
   src: ./hardware
   layout: ./hardware/layouts
@@ -13,8 +11,6 @@ builds:
   test_pickable:
     entry: hardware/test_pickable.ato:TestPickableApp
 
-# Local packages
-
 dependencies:
   - type: registry
     identifier: atopile/bosch-bmp280
@@ -25,24 +21,14 @@ dependencies:
   - type: registry
     identifier: atopile/buttons
     release: 0.3.1
-# Optional package metadata (fill if publishing)
 
-# package:
-
-#   identifier: pete5/pico-quadcopter-flight-controller
-
-#   repository: https://github.com/pete529/PICO_Drone_Mk1
-
-#   version: "0.1.0"
-
-#   authors:
-
-#     - name: Pete Barnes
-
-#       email: pete529@virginmedia.com
-
-#   summary: Raspberry Pi Pico 2W based quadcopter flight controller PCB
-
-#   license: MIT
-
-# homepage: https://github.com/pete529/PICO_Drone_Mk1
+package:
+  identifier: pete5/pico-quadcopter-flight-controller
+  repository: https://github.com/pete529/PICO_Drone_Mk1
+  version: "0.1.0"
+  authors:
+    - name: Pete Barnes
+      email: pete529@virginmedia.com
+  summary: Raspberry Pi Pico 2W based quadcopter flight controller PCB
+  license: MIT
+  homepage: https://github.com/pete529/PICO_Drone_Mk1

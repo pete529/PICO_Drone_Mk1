@@ -1,0 +1,36 @@
+"""
+Amigo Pro power manager / charger
+"""
+
+import Electrical
+import ElectricPower
+import ElectricLogic
+
+component AmigoPro:
+    """Amigo Pro (charger/power manager)"""
+
+    # Interfaces
+    power_5v = new ElectricPower
+    power_batt_in = new ElectricPower
+    power_batt_out = new ElectricPower
+    chg_status = new ElectricLogic
+
+    # Footprint pins (must match the footprint pinmap exactly)
+    pin V5
+    pin GND
+    pin VBAT_IN
+    pin VBAT_OUT
+    pin CHG_STATUS
+
+    # Wiring interfaces to pins
+    power_5v.hv ~ V5
+    power_5v.lv ~ GND
+
+    power_batt_in.hv ~ VBAT_IN
+    power_batt_in.lv ~ GND
+
+    power_batt_out.hv ~ VBAT_OUT
+    power_batt_out.lv ~ GND
+
+    chg_status.line ~ CHG_STATUS
+    chg_status.reference ~ power_5v

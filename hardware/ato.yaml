@@ -1,25 +1,32 @@
-requires-atopile: "0.12.4"
+requires-atopile: 0.12.4
 
 paths:
-  src: ./
-  layout: ./layouts
-  modules: ./modules
+  src: ./hardware/atopile
+  layout: ./hardware/layouts
+  modules: ./hardware/modules
 
 builds:
   default:
     entry: main.ato:App
-  test_pickable:
-    entry: test_pickable.ato:TestPickableApp
 
-# This metadata is only required for publishing
-# Uncomment it and fill out the fields to publish your package
-# package:
-#   identifier: # fill me!/drone_mk1
-#   repository: # fill me!
-#   version: "0.1.0"  # recommended first version
-#   authors:
-#     - name: Pete Barnes
-#       email: pete529@virginmedia.com
-#   summary: # fill me!
-#   license: MIT license
-#   homepage: # fill me!
+dependencies:
+  - type: registry
+    identifier: atopile/bosch-bmp280
+    release: 0.1.2
+  - type: registry
+    identifier: atopile/indicator-leds
+    release: 0.1.6
+  - type: registry
+    identifier: atopile/buttons
+    release: 0.3.1
+
+package:
+  identifier: pete529/pico-quadcopter-fc
+  repository: https://github.com/pete529/PICO_Drone_Mk1
+  version: "0.1.0"
+  authors:
+    - name: Pete Barnes
+      email: pete529@virginmedia.com
+  summary: Raspberry Pi Pico 2W quadcopter flight controller
+  license: MIT
+  homepage: https://github.com/pete529/PICO_Drone_Mk1

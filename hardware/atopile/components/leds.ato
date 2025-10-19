@@ -1,4 +1,8 @@
-component Led0603:
-	# Simple LED (abstract). Real value/package resolved via future part binding.
-	pin A
-	pin K
+"""
+Standard LEDs
+"""
+import Electrical
+
+module Led0603:
+    A = new Electrical
+    K = new Electrical

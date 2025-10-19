@@ -1,7 +1,40 @@
-component Gy91:
-	# GY-91 (IMU + barometer carrier) - abstract interface only.
-	pin SDA
-	pin SCL
-	pin INT
-	pin VCC
-	pin GND
+"""
+GY-91 Module (ICM-20948 IMU)
+9-DOF sensor breakout board
+"""
+
+import Electrical
+import ElectricPower
+import I2C
+
+component GY91:
+    """GY-91 IMU breakout (ICM-20948)"""
+    
+    # Power interface
+    power = new ElectricPower
+    
+    # I2C interface
+    i2c = new I2C
+    
+    # Interrupt as Electrical interface (not a physical pin)
+    INT = new Electrical
+    
+    # Physical pins - ONLY these 5 pins match the footprint
+    pin VCC
+    pin GND
+    pin SCL
+    pin SDA
+    pin INT
+    
+    # Connect power interface to physical pins
+    power.hv ~ VCC
+    power.lv ~ GND
+    
+    # Connect I2C interface
+    i2c.scl.line ~ SCL
+    i2c.sda.line ~ SDA
+    i2c.scl.reference ~ power
+    i2c.sda.reference ~ power
+    
+    # Power requirements
+    assert power.voltage within 2.4V to 3.6V
