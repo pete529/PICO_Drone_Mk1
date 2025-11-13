@@ -69,10 +69,10 @@ This project is a complete Raspberry Pi Pico 2W based quadcopter featuring:
 ## Build System
 
 ### Local Development
-Requirements: Python 3.11+, Atopile 0.12.4
+Requirements: Python 3.13+, Atopile 0.12.4
 
 ```powershell
-# Install atopile (Windows-friendly)
+# Install atopile (Windows-friendly) - Requires Python 3.13 or later
 py -m pip install --upgrade atopile==0.12.4
 
 # From repo root, verify and open the design viewer
