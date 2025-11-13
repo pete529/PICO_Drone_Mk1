@@ -68,15 +68,18 @@ module App:
     power_3v3 ~ baro.power_io
     
     # Motor driver control signals (direct to Pico GPIOs)
-    pico.GP8 ~ drv_left.AIN1
-    pico.GP9 ~ drv_left.AIN2
-    pico.GP2 ~ drv_left.BIN1
-    pico.GP3 ~ drv_left.BIN2
-    pico.GP4 ~ drv_right.AIN1
-    pico.GP5 ~ drv_right.AIN2
-    pico.GP6 ~ drv_right.BIN1
-    pico.GP7 ~ drv_right.BIN2
-    # Enable/SLEEP pins
+    # Left DRV8833 (Motor A) - GP2, GP3, GP4, GP5
+    pico.GP2 ~ drv_left.AIN1
+    pico.GP3 ~ drv_left.AIN2
+    pico.GP4 ~ drv_left.BIN1
+    pico.GP5 ~ drv_left.BIN2
+    # Right DRV8833 (Motor B) - GP6, GP7, GP8, GP9
+    pico.GP6 ~ drv_right.AIN1
+    pico.GP7 ~ drv_right.AIN2
+    pico.GP8 ~ drv_right.BIN1
+    pico.GP9 ~ drv_right.BIN2
+    # Enable/SLEEP pins - Connected to 3V3 (pulled high to enable)
+    # Note: nSLEEP should be connected to 3V3 in hardware per wiring spec
     pico.GP15 ~ drv_left.SLEEP
     pico.GP17 ~ drv_right.SLEEP
     

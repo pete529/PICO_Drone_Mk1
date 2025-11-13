@@ -72,12 +72,12 @@ LiPo Battery (3.7V) → Amigo Pro → VSYS (Pico) → 3V3_OUT (Sensors)
 ### Motor Control Matrix
 | Motor | Driver | GPIO Pins | Function |
 |-------|--------|-----------|----------|
-| L1 (Front-Left) | DRV8833_L | GP0, GP1 | Direction A/B |
-| L2 (Rear-Left) | DRV8833_L | GP2, GP3 | Direction A/B |
-| R1 (Front-Right) | DRV8833_R | GP4, GP5 | Direction A/B |
-| R2 (Rear-Right) | DRV8833_R | GP6, GP7 | Direction A/B |
-| Enable Left | DRV8833_L | GP8 | SLEEP |
-| Enable Right | DRV8833_R | GP9 | SLEEP |
+| L1 (Front-Left) | DRV8833_L | GP2, GP3 | AIN1, AIN2 (Motor A direction/PWM) |
+| L2 (Rear-Left) | DRV8833_L | GP4, GP5 | BIN1, BIN2 (Motor A direction/PWM) |
+| R1 (Front-Right) | DRV8833_R | GP6, GP7 | AIN1, AIN2 (Motor B direction/PWM) |
+| R2 (Rear-Right) | DRV8833_R | GP8, GP9 | BIN1, BIN2 (Motor B direction/PWM) |
+| Enable Left | DRV8833_L | GP15 | nSLEEP (or tied to 3V3) |
+| Enable Right | DRV8833_R | GP17 | nSLEEP (or tied to 3V3) |
 
 ### I2C Bus Connections
 - **SDA**: GP26 → ICM-20946 SDA, BMP280 SDA
@@ -88,8 +88,9 @@ LiPo Battery (3.7V) → Amigo Pro → VSYS (Pico) → 3V3_OUT (Sensors)
 ### Status and Control
 - **GP13**: Power button input (with pull-up)
 - **GP14**: Red LED control (activity indicator)
-- **GP15**: Green LED control (power indicator)
+- **GP15**: Left DRV8833 enable/sleep control (or tied to 3V3)
 - **GP16**: IMU interrupt input
+- **GP17**: Right DRV8833 enable/sleep control (or tied to 3V3)
 
 ## ✅ **Generated Files**
 
