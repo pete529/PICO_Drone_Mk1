@@ -1,0 +1,61 @@
+=============================================================================
+GPIO PIN ASSIGNMENT COMPARISON - DRV8833 Motor Drivers
+=============================================================================
+
+BEFORE (Old Configuration):
+┌────────────────────────────────────────────────────────────────────────┐
+│ LEFT DRV8833                    │ RIGHT DRV8833                        │
+├────────────────────────────────────────────────────────────────────────┤
+│ GP8  → AIN1 (Motor L1 Dir A)    │ GP4  → AIN1 (Motor R1 Dir A)        │
+│ GP9  → AIN2 (Motor L1 Dir B)    │ GP5  → AIN2 (Motor R1 Dir B)        │
+│ GP2  → BIN1 (Motor L2 Dir A)    │ GP6  → BIN1 (Motor R2 Dir A)        │
+│ GP3  → BIN2 (Motor L2 Dir B)    │ GP7  → BIN2 (Motor R2 Dir B)        │
+└────────────────────────────────────────────────────────────────────────┘
+
+Issues: Non-sequential pins, less intuitive wiring
+
+
+AFTER (New Configuration) - ✅ CURRENT:
+┌────────────────────────────────────────────────────────────────────────┐
+│ LEFT DRV8833                    │ RIGHT DRV8833                        │
+├────────────────────────────────────────────────────────────────────────┤
+│ GP2  → AIN1 (Motor A Dir/PWM)   │ GP6  → AIN1 (Motor C Dir/PWM)       │
+│ GP3  → AIN2 (Motor A Dir/PWM)   │ GP7  → AIN2 (Motor C Dir/PWM)       │
+│ GP4  → BIN1 (Motor B Dir/PWM)   │ GP8  → BIN1 (Motor D Dir/PWM)       │
+│ GP5  → BIN2 (Motor B Dir/PWM)   │ GP9  → BIN2 (Motor D Dir/PWM)       │
+│                                 │                                      │
+│ GP15 → nSLEEP (Enable)          │ GP17 → nSLEEP (Enable)              │
+└────────────────────────────────────────────────────────────────────────┘
+
+Benefits:
+✅ Sequential GPIO pins (2-5, 6-9)
+✅ Easier wiring and troubleshooting
+✅ Matches problem statement specification
+✅ Frees GP0/GP1 for GPS UART
+
+
+PICO 2W PHYSICAL PIN MAPPING:
+═══════════════════════════════════════════════════════════════════════
+
+Physical Pin │ GPIO  │ Function            │ Connected To
+─────────────┼───────┼─────────────────────┼──────────────────────────
+Pin 1        │ GP0   │ GPS UART RX         │ GPS TX
+Pin 2        │ GP1   │ GPS UART TX         │ GPS RX
+Pin 4        │ GP2   │ Motor A AIN1        │ Left DRV8833 AIN1
+Pin 5        │ GP3   │ Motor A AIN2        │ Left DRV8833 AIN2
+Pin 6        │ GP4   │ Motor B BIN1        │ Left DRV8833 BIN1
+Pin 7        │ GP5   │ Motor B BIN2        │ Left DRV8833 BIN2
+Pin 9        │ GP6   │ Motor C AIN1        │ Right DRV8833 AIN1
+Pin 10       │ GP7   │ Motor C AIN2        │ Right DRV8833 AIN2
+Pin 11       │ GP8   │ Motor D BIN1        │ Right DRV8833 BIN1
+Pin 12       │ GP9   │ Motor D BIN2        │ Right DRV8833 BIN2
+Pin 19       │ GP14  │ Red LED             │ Activity indicator
+Pin 20       │ GP15  │ Left DRV enable     │ Left DRV8833 nSLEEP
+Pin 21       │ GP16  │ IMU interrupt       │ GY-91 INT pin
+Pin 22       │ GP17  │ Right DRV enable    │ Right DRV8833 nSLEEP
+Pin 31       │ GP26  │ I2C SDA             │ IMU + BMP280 SDA
+Pin 32       │ GP27  │ I2C SCL             │ IMU + BMP280 SCL
+Pin 36       │ 3V3   │ Logic power         │ DRV8833 VCC, sensors
+Pin 38       │ GND   │ Ground reference    │ All components
+
+═══════════════════════════════════════════════════════════════════════

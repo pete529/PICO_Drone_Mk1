@@ -5,29 +5,31 @@
 ## Raspberry Pi Pico 2W (U1)
 | Function | Pico GPIO | Planned Net | Notes |
 |----------|-----------|-------------|-------|
-| I2C SDA  | GP0       | SDA         | IMU + BMP280 bus |
-| I2C SCL  | GP1       | SCL         | IMU + BMP280 bus |
-| IMU INT  | GP2       | IMU_INT     | Optional interrupt |
-| Spare / SPI | GP3    | SPI / Spare | Reserved |
-| Motor L A | GP4      | L_M1        | DRV8833 Left AIN1 |
-| Motor L B | GP5      | L_M2        | DRV8833 Left AIN2 |
-| Motor L C | GP6      | L_M3        | DRV8833 Left BIN1 |
-| Motor L D | GP7      | L_M4        | DRV8833 Left BIN2 |
-| Motor R A | GP8      | R_M1        | DRV8833 Right AIN1 |
-| Motor R B | GP9      | R_M2        | DRV8833 Right AIN2 |
-| Motor R C | GP10     | R_M3        | DRV8833 Right BIN1 |
-| Motor R D | GP11     | R_M4        | DRV8833 Right BIN2 |
-| Red LED   | GP12     | LED_RED     | Activity blink |
-| Green LED | GP13     | LED_GREEN   | Power on indicator |
-| Power Btn | GP14     | BTN_PWR     | Input w/ pull-up |
-| (Reserve) | GP15     | DEBUG_RX    | UART debug RX |
-| UART TX   | GP16     | DEBUG_TX    | UART debug to external header |
-| (Reserve) | GP17     | SPI / Spare | Expansion |
-| (Reserve) | GP18     | SPI / Spare | Expansion |
-| (Reserve) | GP19     | SPI / Spare | Expansion |
-| (Reserve) | GP20     | SPI / Spare | Expansion |
-| (Reserve) | GP21     | SPI / Spare | Expansion |
-| (Reserve) | GP22     | SPI / Spare | Expansion |
+| GPS RX   | GP0       | GPS_RX      | UART0 RX - GPS module |
+| GPS TX   | GP1       | GPS_TX      | UART0 TX - GPS module |
+| Motor L A | GP2      | L_M1        | DRV8833 Left AIN1 (Motor A direction/PWM) |
+| Motor L B | GP3      | L_M2        | DRV8833 Left AIN2 (Motor A direction/PWM) |
+| Motor L C | GP4      | L_M3        | DRV8833 Left BIN1 (Motor A direction/PWM) |
+| Motor L D | GP5      | L_M4        | DRV8833 Left BIN2 (Motor A direction/PWM) |
+| Motor R A | GP6      | R_M1        | DRV8833 Right AIN1 (Motor B direction/PWM) |
+| Motor R B | GP7      | R_M2        | DRV8833 Right AIN2 (Motor B direction/PWM) |
+| Motor R C | GP8      | R_M3        | DRV8833 Right BIN1 (Motor B direction/PWM) |
+| Motor R D | GP9      | R_M4        | DRV8833 Right BIN2 (Motor B direction/PWM) |
+| (Reserve) | GP10     | Spare       | Reserved for expansion |
+| (Reserve) | GP11     | Spare       | Reserved for expansion |
+| (Reserve) | GP12     | Spare       | Reserved for expansion |
+| Power Btn | GP13     | BTN_PWR     | Input (button) |
+| Red LED   | GP14     | LED_RED     | Activity blink |
+| DRV_L EN  | GP15     | DRV_L_SLEEP | DRV8833 Left enable/sleep |
+| IMU INT   | GP16     | IMU_INT     | IMU interrupt input |
+| DRV_R EN  | GP17     | DRV_R_SLEEP | DRV8833 Right enable/sleep |
+| (Reserve) | GP18     | Spare       | Reserved for expansion |
+| (Reserve) | GP19     | Spare       | Reserved for expansion |
+| (Reserve) | GP20     | Spare       | Reserved for expansion |
+| (Reserve) | GP21     | Spare       | Reserved for expansion |
+| (Reserve) | GP22     | Spare       | Reserved for expansion |
+| I2C SDA   | GP26     | SDA         | I2C data - IMU + BMP280 |
+| I2C SCL   | GP27     | SCL         | I2C clock - IMU + BMP280 |
 | RUN       | RUN      | RUN_EN      | Can be tied to button for reset |
 | 3V3       | 3V3      | +3V3        | Regulated output |
 | VSYS      | VSYS     | VBAT / +5V  | From Amigo Pro |
@@ -36,16 +38,16 @@
 ## DRV8833 (U2/U3) Dual H-Bridge (Typical)
 | Pin | Signal | Net | Notes |
 |-----|--------|-----|-------|
-| 1   | nSLEEP | +3V3 (pull-up) | Enable tied high (or GPIO for control) |
-| 2   | AIN1   | L_M1 / R_M1 | Left/Right mapping |
-| 3   | AIN2   | L_M2 / R_M2 |  |
-| 4   | BIN1   | L_M3 / R_M3 |  |
-| 5   | BIN2   | L_M4 / R_M4 |  |
+| 1   | nSLEEP | +3V3 (or GPIO control) | Enable: tied to +3V3 to always enable, or GP15(L)/GP17(R) for power control |
+| 2   | AIN1   | GP2(L) / GP6(R) | Left uses GP2, Right uses GP6 |
+| 3   | AIN2   | GP3(L) / GP7(R) | Left uses GP3, Right uses GP7 |
+| 4   | BIN1   | GP4(L) / GP8(R) | Left uses GP4, Right uses GP8 |
+| 5   | BIN2   | GP5(L) / GP9(R) | Left uses GP5, Right uses GP9 |
 | 6   | nFAULT | (test pad) | Optional status |
 | 7   | VREF   | (NC or tuned) | If current limiting used |
 | 8   | GND    | GND | Ground |
 | 9   | GND    | GND | Thermal pad (if exposed) |
-| 10  | VM     | +MOTOR | Motor supply |
+| 10  | VM     | +MOTOR | Motor supply (5V from Amigo Pro) |
 | 11  | OUT1A  | MOTOR_L1 / MOTOR_R1 | Off-board to motor |
 | 12  | OUT1B  | MOTOR_L2 / MOTOR_R2 |  |
 | 13  | OUT2A  | MOTOR_L3 / MOTOR_R3 |  |
