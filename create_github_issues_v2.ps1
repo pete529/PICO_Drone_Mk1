@@ -15,7 +15,8 @@ param(
     [int]$GhTimeoutSeconds = 60,
     [switch]$SkipUnchanged,
     [int]$FromIndex = 0,
-    [switch]$ParseOnly
+    [switch]$ParseOnly,
+    [string]$FilterTitle
 )
 
 # v2: Parse Markdown (Epics/Features/Stories) and create/update GitHub issues idempotently
@@ -26,7 +27,7 @@ param(
 # - -DryRun: print planned actions without changing repo
 # - Auth: uses existing gh session; if -GitHubToken or env GH_TOKEN/GITHUB_TOKEN present, sets env for gh
 
-function Ensure-GhAuth {
+function Assert-GhAuth {
     param()
     $envToken = $null
     if ($GitHubToken) { $envToken = $GitHubToken }
@@ -34,10 +35,9 @@ function Ensure-GhAuth {
     elseif ($env:GITHUB_TOKEN) { $envToken = $env:GITHUB_TOKEN }
 
     if ($envToken) { $env:GH_TOKEN = $envToken }
-    [string]$FilterTitle,
 
     try {
-        $status = gh auth status 2>$null
+        $authStatus = gh auth status 2>$null
         if ($LASTEXITCODE -ne 0) { throw "gh not authenticated" }
         Write-Host "GitHub CLI authenticated." -ForegroundColor Green
     } catch {
@@ -125,7 +125,7 @@ function Resolve-Repo {
     throw "Unable to resolve current repo. Pass -Owner and -Repo."
 }
 
-function Parse-LabelsFromText {
+function ConvertFrom-LabelsText {
     param([string]$text)
     $labels = @()
     if (-not [string]::IsNullOrEmpty($text)) {
@@ -137,21 +137,20 @@ function Parse-LabelsFromText {
     return ,$labels
 }
 
-function Strip-LabelsTag {
+function Remove-LabelsTag {
     param([string]$text)
     if (-not $text) { return $text }
     return ($text -replace "\s*\[labels:\s*[^\]]+\]\s*"," ").Trim()
 }
 
-function Parse-Stories {
+function ConvertFrom-Stories {
     param([string[]]$lines)
     $issues = @()
     $current = $null
-    $currentLevel = 0
     $pendingBody = New-Object System.Collections.Generic.List[string]
     $docTitleConsumed = $false
 
-    function Is-HeadingIssueText([string]$text) {
+    function Test-HeadingIssueText([string]$text) {
         return ($text -match '^(Epic|Feature|Story)\b')
     }
 
@@ -186,17 +185,17 @@ function Parse-Stories {
             $text = $matches[2].Trim()
 
             # Skip a top-level document title that isn't an issue heading
-            if (-not $docTitleConsumed -and $level -eq 1 -and -not (Is-HeadingIssueText $text)) {
+            if (-not $docTitleConsumed -and $level -eq 1 -and -not (Test-HeadingIssueText $text)) {
                 $docTitleConsumed = $true
                 continue
             }
 
             # Only treat levels 1-3 as issues and only if text starts with Epic/Feature/Story
-            if ($level -le 3 -and (Is-HeadingIssueText $text)) {
+            if ($level -le 3 -and (Test-HeadingIssueText $text)) {
                 FlushCurrent
 
-                $labels = Parse-LabelsFromText -text $text
-                $title = Strip-LabelsTag -text $text
+                $labels = ConvertFrom-LabelsText -text $text
+                $title = Remove-LabelsTag -text $text
 
                 $typeLabel = switch -Regex ($title) {
                     '^Epic\b' { 'Epic'; break }
@@ -210,7 +209,6 @@ function Parse-Stories {
                     labels = @($typeLabel) + $labels
                     level = $level
                 }
-                $currentLevel = $level
                 continue
             }
         }
@@ -250,7 +248,7 @@ function Get-ExistingIssuesMap {
     return @{ byTitle = $byTitle; byKey = $byKey }
 }
 
-function Ensure-Labels {
+function Assert-Labels {
     param([string]$Owner,[string]$Repo,[string[]]$labels)
     if (-not $labels -or $labels.Count -eq 0) { return }
     $existing = @()
@@ -284,7 +282,7 @@ function Set-IssueBody {
     Invoke-GhSafe -CommandLine "gh issue edit $number --repo $Owner/$Repo --body-file `"$tmp`"" | Out-Null
 }
 
-function Reconcile-Labels {
+function Sync-Labels {
     param([int]$number,[string]$Owner,[string]$Repo,[string[]]$desired,[object]$existingIssue)
     $existing = @()
     if ($existingIssue -and $existingIssue.labels) { $existing = @($existingIssue.labels.name) }
@@ -303,10 +301,10 @@ function Reconcile-Labels {
         return
     }
     if ($toAdd.Count -eq 0 -and $toRemove.Count -eq 0) { return }
-    $args = @("issue","edit", "$number", "--repo", "$Owner/$Repo")
-    foreach ($l in $toAdd) { $args += @("--add-label", $l) }
-    foreach ($l in $toRemove) { $args += @("--remove-label", $l) }
-    $escaped = $args | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
+    $cmdArgs = @("issue","edit", "$number", "--repo", "$Owner/$Repo")
+    foreach ($l in $toAdd) { $cmdArgs += @("--add-label", $l) }
+    foreach ($l in $toRemove) { $cmdArgs += @("--remove-label", $l) }
+    $escaped = $cmdArgs | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
     Invoke-GhSafe -CommandLine ("gh " + ($escaped -join ' ')) | Out-Null
 }
 
@@ -352,7 +350,7 @@ function Write-RunSummary {
 # Main
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 try {
-    if (-not $ParseOnly) { Ensure-GhAuth }
+    if (-not $ParseOnly) { Assert-GhAuth }
     if (-not $ParseOnly) {
         if (-not $Owner -or -not $Repo) {
             $repo = Resolve-Repo -Owner $Owner -Repo $Repo
@@ -368,7 +366,7 @@ try {
     $lines = Get-Content -Path $StoriesPath -Encoding UTF8
 
     Write-Host "Parsing $StoriesPath..." -ForegroundColor Green
-    $desiredIssues = Parse-Stories -lines $lines
+    $desiredIssues = ConvertFrom-Stories -lines $lines
     Write-Host ("Found {0} items to sync from markdown" -f $desiredIssues.Count) -ForegroundColor Cyan
     $filteredCount = $desiredIssues.Count
     if ($FilterTitle) {
@@ -401,7 +399,7 @@ try {
         $allLabels = @()
         foreach ($d in $desiredIssues) { $allLabels += $d.labels }
         $allLabels = @($allLabels | Where-Object { $_ } | Select-Object -Unique)
-        Ensure-Labels -Owner $Owner -Repo $Repo -labels $allLabels
+        Assert-Labels -Owner $Owner -Repo $Repo -labels $allLabels
 
         $existingMaps = Get-ExistingIssuesMap -Owner $Owner -Repo $Repo
     } else {
@@ -451,7 +449,7 @@ try {
                     }
                     if (-not $DryRun) {
                         if (-not $skipBody) { Set-IssueBody -number $ex.number -Owner $Owner -Repo $Repo -body $d.body }
-                        Reconcile-Labels -number $ex.number -Owner $Owner -Repo $Repo -desired $d.labels -existingIssue $ex
+                        Sync-Labels -number $ex.number -Owner $Owner -Repo $Repo -desired $d.labels -existingIssue $ex
                     }
                     $updated.Add($d.title) | Out-Null
                 } else {
