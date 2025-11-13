@@ -5,20 +5,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
-@OptIn(DelicateCoroutinesApi::class)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,8 +32,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SenderScreen() {
+    val coroutineScope = rememberCoroutineScope()
     var ip by remember { mutableStateOf("192.168.4.1") }
     var port by remember { mutableStateOf("8888") }
     var throttle by remember { mutableStateOf(0f) }
@@ -43,8 +47,8 @@ fun SenderScreen() {
     var armed by remember { mutableStateOf(false) }
     var useSignature by remember { mutableStateOf(true) }
 
-    var sending by remember { mutableStateOf(false) }
     var ack by remember { mutableStateOf("") }
+    var sendJob by remember { mutableStateOf<Job?>(null) }
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(value = ip, onValueChange = { ip = it }, label = { Text("Pico IP (AP)") })
@@ -82,7 +86,7 @@ fun SenderScreen() {
             )
         }
         // Dual joysticks: left (yaw/throttle Y), right (roll/pitch)
-        DualJoysticks(
+        JetStickPair(
             onLeft = { x, y ->
                 yaw = x.coerceIn(-1f, 1f)
                 throttle = ((y + 1f) / 2f).coerceIn(0f, 1f) // map [-1..1] -> [0..1]
@@ -94,46 +98,71 @@ fun SenderScreen() {
         )
         Text("T=${"%.2f".format(throttle)} R=${"%.2f".format(roll)} P=${"%.2f".format(pitch)} Y=${"%.2f".format(yaw)}")
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                if (!sending) {
-                    sending = true
-                    GlobalScope.launch(Dispatchers.IO) {
-                        val addr = InetAddress.getByName(ip)
-                        val p = port.toIntOrNull() ?: 8888
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                onClick = {
+                    if (sendJob?.isActive == true) return@Button
+                    val targetPort = port.toIntOrNull()
+                    if (targetPort == null) {
+                        ack = "Invalid port"
+                        return@Button
+                    }
+                    val address = runCatching { InetAddress.getByName(ip) }.getOrElse {
+                        ack = "Invalid IP"
+                        return@Button
+                    }
+                    val job = coroutineScope.launch(Dispatchers.IO) {
                         DatagramSocket().use { sock ->
                             sock.soTimeout = 200
-                            while (sending) {
+                            while (isActive) {
                                 val prefix = if (useSignature) "DRN," else ""
-                                val t = if (armed) throttle else 0f
-                                val msg = "$prefix${t},${roll},${pitch},${yaw}\n"
+                                val throttleValue = if (armed) throttle else 0f
+                                val msg = "$prefix${throttleValue},${roll},${pitch},${yaw}\n"
                                 val bytes = msg.toByteArray()
-                                val pkt = DatagramPacket(bytes, bytes.size, addr, p)
+                                val pkt = DatagramPacket(bytes, bytes.size, address, targetPort)
                                 sock.send(pkt)
-                                // Optional heartbeat/ack check
                                 try {
                                     val buf = ByteArray(128)
                                     val rx = DatagramPacket(buf, buf.size)
                                     sock.receive(rx)
-                                    val s = String(rx.data, 0, rx.length).trim()
-                                    ack = s
-                                    // Parse telemetry e.g. "ACK BAT=3.77 RSSI=-45"
-                                    val parts = s.split(" ")
-                                    parts.forEach { part ->
-                                        when {
-                                            part.startsWith("BAT=") -> bat = part.removePrefix("BAT=")
-                                            part.startsWith("RSSI=") -> rssi = part.removePrefix("RSSI=")
+                                    val response = String(rx.data, 0, rx.length).trim()
+                                    withContext(Dispatchers.Main) {
+                                        ack = response
+                                        response.split(" ").forEach { part ->
+                                            when {
+                                                part.startsWith("BAT=") -> bat = part.removePrefix("BAT=")
+                                                part.startsWith("RSSI=") -> rssi = part.removePrefix("RSSI=")
+                                            }
                                         }
                                     }
-                                } catch (_: Exception) {}
+                                } catch (_: Exception) {
+                                    // We only care about successful ACK frames
+                                }
                                 delay(20)
                             }
                         }
                     }
-                }
-            }) { Text("Start") }
-            Button(onClick = { sending = false }) { Text("Stop") }
-            Column { Text("ACK: $ack"); if (bat.isNotEmpty()) Text("BAT: $bat V"); if (rssi.isNotEmpty()) Text("RSSI: $rssi dBm") }
+                    job.invokeOnCompletion {
+                        coroutineScope.launch {
+                            sendJob = null
+                        }
+                    }
+                    sendJob = job
+                },
+                enabled = sendJob?.isActive != true
+            ) { Text("Start") }
+            Button(
+                onClick = {
+                    sendJob?.cancel()
+                    sendJob = null
+                },
+                enabled = sendJob != null
+            ) { Text("Stop") }
+            Column {
+                Text("ACK: $ack")
+                if (bat.isNotEmpty()) Text("BAT: $bat V")
+                if (rssi.isNotEmpty()) Text("RSSI: $rssi dBm")
+            }
         }
     }
 }
