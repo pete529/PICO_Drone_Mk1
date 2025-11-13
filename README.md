@@ -17,9 +17,7 @@ This project is a complete Raspberry Pi Pico 2W based quadcopter featuring:
 
 ![alt text](<drone img 1.jpg>)
 
-![alt text](<drone img 2.jpg>)
 
-![alt text](<WhatsApp Image 2025-11-13 at 22.13.23_fc6f4090.jpg>)
 ## Project Structure
 ```
 ├── hardware/                    # Main atopile project directory
