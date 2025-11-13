@@ -14,11 +14,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
-import kotlin.math.min
 
 @Composable
 fun Joystick(
-    size: Dp = 160.dp,
+    joystickSize: Dp = 160.dp,
     deadzone: Float = 0.05f,
     onChange: (x: Float, y: Float) -> Unit
 ) {
@@ -26,7 +25,7 @@ fun Joystick(
 
     Box(
         modifier = Modifier
-            .size(size)
+            .size(joystickSize)
             .background(MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium)
             .pointerInput(Unit) {
                 detectDragGestures(onDragStart = { _ ->
@@ -54,11 +53,11 @@ fun Joystick(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val r = min(this.size.width, this.size.height) / 2f
+            val drawRadius = size.minDimension / 2f
             // Outer ring
-            drawCircle(color = Color.DarkGray, radius = r)
+            drawCircle(color = Color.DarkGray, radius = drawRadius)
             // Inner knob
-            drawCircle(color = Color.Cyan, radius = r / 4f, center = center + knob)
+            drawCircle(color = Color.Cyan, radius = drawRadius / 4f, center = center + knob)
         }
     }
 }

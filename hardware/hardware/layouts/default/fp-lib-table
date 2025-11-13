@@ -1,0 +1,31 @@
+(fp_lib_table
+    (version 7)
+    (lib
+        (name "Samsung_Electro_Mechanics_CL05B104KO5NNNC")
+        (type "KiCad")
+        (uri "${KIPRJMOD}\\..\\..\\atopile\\parts\\Samsung_Electro_Mechanics_CL05B104KO5NNNC")
+        (options "")
+        (descr "atopile: part lib: Samsung_Electro_Mechanics_CL05B104KO5NNNC")
+    )
+    (lib
+        (name "UNI_ROYAL_0402WGF1001TCE")
+        (type "KiCad")
+        (uri "${KIPRJMOD}\\..\\..\\atopile\\parts\\UNI_ROYAL_0402WGF1001TCE")
+        (options "")
+        (descr "atopile: part lib: UNI_ROYAL_0402WGF1001TCE")
+    )
+    (lib
+        (name "UNI_ROYAL_0402WGF1002TCE")
+        (type "KiCad")
+        (uri "${KIPRJMOD}\\..\\..\\atopile\\parts\\UNI_ROYAL_0402WGF1002TCE")
+        (options "")
+        (descr "atopile: part lib: UNI_ROYAL_0402WGF1002TCE")
+    )
+    (lib
+        (name "Hubei_KENTO_Elec_KT_0603R")
+        (type "KiCad")
+        (uri "${KIPRJMOD}\\..\\..\\modules\\atopile\\indicator-leds\\parts\\Hubei_KENTO_Elec_KT_0603R")
+        (options "")
+        (descr "atopile: part lib: Hubei_KENTO_Elec_KT_0603R")
+    )
+)
