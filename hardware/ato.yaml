@@ -1,9 +1,9 @@
 requires-atopile: 0.12.4
 
 paths:
-  src: ./hardware/atopile
-  layout: ./hardware/layouts
-  modules: ./hardware/modules
+  src: ./atopile
+  layout: ./layouts
+  modules: ./modules
 
 builds:
   default:
