@@ -72,10 +72,10 @@ This project is a complete Raspberry Pi Pico 2W based quadcopter featuring:
 ## Build System
 
 ### Local Development
-Requirements: Python 3.11+, Atopile 0.12.4
+Requirements: Python 3.13+, Atopile 0.12.4
 
 ```powershell
-# Install atopile (Windows-friendly)
+# Install atopile (Windows-friendly) - Requires Python 3.13 or later
 py -m pip install --upgrade atopile==0.12.4
 
 # From repo root, verify and open the design viewer
@@ -97,6 +97,24 @@ ato build --build test_pickable
 - Netlists and component reports
 
 Note: The populated BOM is available at `hardware/build/builds/default/default.bom.csv` after a successful build.
+
+### Troubleshooting Build Issues
+
+**VS Code Extension Error: "Client is not running and can't be stopped"**
+- **Cause:** Atopile 0.12.4 requires Python 3.13 or later
+- **Solution:** 
+  1. Install Python 3.13+ from [python.org](https://www.python.org/downloads/)
+  2. Reinstall atopile: `py -m pip install --upgrade atopile==0.12.4`
+  3. Restart VS Code
+  4. Verify with: `python --version` (should show 3.13.0 or higher)
+
+**Build fails with "No such option: --no-color"**
+- **Cause:** Option was added in atopile 0.12.x
+- **Solution:** Update to atopile 0.12.4: `pip install --upgrade atopile==0.12.4`
+
+**Version compatibility issues**
+- This project requires atopile 0.12.4 specifically due to dependency requirements
+- Do not downgrade to 0.2.x versions as they use incompatible syntax and features
 
 ## Drone control over Wi‑Fi UDP
 
